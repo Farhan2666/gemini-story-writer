@@ -883,7 +883,7 @@ export default function App() {
               )}
               {activeTab === 'chapter' && (
                 <button 
-                  onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
+                  onClick={() => { setIsRightPanelOpen(!isRightPanelOpen); closeSidebar(); }}
                   className="lg:hidden flex items-center justify-center p-1.5 text-gray-400 hover:text-purple-400 hover:bg-gray-800 rounded-lg transition-colors"
                   title="Toggle AI Panel"
                 >
