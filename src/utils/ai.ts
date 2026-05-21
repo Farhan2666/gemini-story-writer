@@ -56,8 +56,8 @@ export async function testAIConnection(
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://geministory.com',
-          'X-Title': 'GeminiStory'
+          'HTTP-Referer': 'https://fictify.com',
+          'X-Title': 'Fictify'
         },
         body: JSON.stringify({
           model: model,
@@ -134,8 +134,8 @@ export async function generateAIContent(messages: AIMessage[]): Promise<string> 
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://geministory.com',
-          'X-Title': 'GeminiStory'
+          'HTTP-Referer': 'https://fictify.com',
+          'X-Title': 'Fictify'
         },
         body: JSON.stringify({
           model: model,

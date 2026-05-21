@@ -3,10 +3,10 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { 
-  Book, Globe, Users, Save, Loader2, Plus, Download, FileText, Pencil, 
+  Globe, Users, Save, Loader2, Plus, Download, FileText, Pencil, 
   Trash2, MessageSquare, PenTool, DatabaseBackup, Upload, Wand2, 
   Maximize2, Minimize2, Volume2, Target, Image as ImageIcon,
-  Folder, FolderOpen, Network, Cloud, LogIn, UserCheck, Cpu
+  Folder, FolderOpen, Network, Cloud, LogIn, UserCheck, Cpu, Feather
 } from 'lucide-react';
 
 import CharacterManager from './components/CharacterManager';
@@ -353,7 +353,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'Novel_GeminiStory.txt';
+    a.download = 'Novel_Fictify.txt';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -376,7 +376,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'Novel_Saya.geministory';
+    a.download = 'Novel_Saya.fictify';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -649,9 +649,9 @@ export default function App() {
           {/* Top of Sidebar */}
           <div className="flex-1 overflow-y-auto flex flex-col">
             <div className="p-4 border-b border-gray-900 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Book className="w-6 h-6 text-purple-500" />
-                <h1 className="text-xl font-bold font-mono">GeminiStory</h1>
+              <div className="flex items-center gap-3">
+                <Feather className="w-5.5 h-5.5 text-purple-500 shrink-0" />
+                <h1 className="text-xl font-bold font-mono">Fictify</h1>
               </div>
               <button
                 onClick={() => setIsApiSettingsOpen(true)}
@@ -745,7 +745,7 @@ export default function App() {
                     className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs text-left bg-blue-950/20 text-blue-400 hover:bg-blue-950/40 border border-blue-500/10 transition-colors cursor-pointer"
                   >
                     <Upload className="w-3.5 h-3.5" /> Load Proyek
-                    <input type="file" accept=".geministory,.json" onChange={handleLoadProject} className="hidden" />
+                    <input type="file" accept=".fictify,.json" onChange={handleLoadProject} className="hidden" />
                   </label>
                 </div>
               </div>
