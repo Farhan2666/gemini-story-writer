@@ -1004,7 +1004,7 @@ export default function App() {
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-gray-900 text-emerald-400 border border-emerald-500/20 px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-2.5 animate-in slide-in-from-bottom-5 fade-in duration-300 z-50 backdrop-blur-md">
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-gray-900 text-emerald-400 border border-emerald-500/20 px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-2.5 animate-in slide-in-from-bottom-5 fade-in duration-300 z-[70] backdrop-blur-md">
           <UserCheck className="w-4 h-4" />
           <span className="text-xs font-bold">{toastMessage}</span>
         </div>
@@ -1012,7 +1012,7 @@ export default function App() {
 
       {/* Mobile Bottom Navigation */}
       {!isZenMode && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 lg:hidden bg-gray-950/95 backdrop-blur border-t border-gray-850 safe-area-bottom">
+        <div className="fixed bottom-0 left-0 right-0 z-[60] lg:hidden bg-gray-950/95 backdrop-blur border-t border-gray-850 safe-area-bottom">
           <div className="flex items-center justify-around py-2 px-1">
             <button 
               onClick={() => { setActiveTab('chapter'); closeSidebar(); }}
