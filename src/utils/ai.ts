@@ -4,7 +4,7 @@ export interface AIMessage {
 }
 
 export interface AISettings {
-  provider: 'gemini' | 'openrouter';
+  provider: 'gemini' | 'openai' | 'deepseek' | 'groq' | 'openrouter';
   apiKey: string;
   model: string;
 }
@@ -13,16 +13,39 @@ const FALLBACK_GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 
 // Mengambil pengaturan aktif dari localStorage dengan fallback ke .env.local
 export function getAISettings(): AISettings {
-  const provider = (localStorage.getItem('gemini-api-provider') as 'gemini' | 'openrouter') || 'gemini';
+  const provider = (localStorage.getItem('gemini-api-provider') as 'gemini' | 'openai' | 'deepseek' | 'groq' | 'openrouter') || 'gemini';
   const apiKey = localStorage.getItem('gemini-api-key') || FALLBACK_GEMINI_KEY;
-  const model = localStorage.getItem('gemini-api-model') || (provider === 'gemini' ? 'gemini-2.5-flash' : 'google/gemini-2.5-flash');
+  
+  let defaultModel = 'gemini-2.5-flash';
+  if (provider === 'openai') defaultModel = 'gpt-4o-mini';
+  else if (provider === 'deepseek') defaultModel = 'deepseek-chat';
+  else if (provider === 'groq') defaultModel = 'llama-3.3-70b-versatile';
+  else if (provider === 'openrouter') defaultModel = 'google/gemini-2.5-flash';
+
+  const model = localStorage.getItem('gemini-api-model') || defaultModel;
   
   return { provider, apiKey, model };
 }
 
+// Mengembalikan endpoint URL berdasarkan provider
+function getProviderEndpoint(provider: string): string {
+  switch (provider) {
+    case 'openai':
+      return 'https://api.openai.com/v1/chat/completions';
+    case 'deepseek':
+      return 'https://api.deepseek.com/v1/chat/completions';
+    case 'groq':
+      return 'https://api.groq.com/openai/v1/chat/completions';
+    case 'openrouter':
+      return 'https://openrouter.ai/api/v1/chat/completions';
+    default:
+      return '';
+  }
+}
+
 // Uji koneksi kunci API ke provider terpilih
 export async function testAIConnection(
-  provider: 'gemini' | 'openrouter',
+  provider: 'gemini' | 'openai' | 'deepseek' | 'groq' | 'openrouter',
   apiKey: string,
   model: string
 ): Promise<boolean> {
@@ -49,16 +72,21 @@ export async function testAIConnection(
       const data = await response.json();
       return !!data.candidates?.[0]?.content?.parts?.[0]?.text;
     } else {
-      // OpenRouter provider
-      const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+      // OpenAI-compatible providers
+      const endpoint = getProviderEndpoint(provider);
+      const headers: HeadersInit = {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      };
+
+      if (provider === 'openrouter') {
+        headers['HTTP-Referer'] = 'https://fictify.com';
+        headers['X-Title'] = 'Fictify';
+      }
+
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://fictify.com',
-          'X-Title': 'Fictify'
-        },
+        headers: headers,
         body: JSON.stringify({
           model: model,
           messages: [{ role: 'user', content: 'Halo, katakan "ok" jika terkoneksi.' }],
@@ -91,7 +119,6 @@ export async function generateAIContent(messages: AIMessage[]): Promise<string> 
   try {
     if (provider === 'gemini') {
       // Direct Google Gemini API
-      // Pastikan model gemini tidak diawali provider slash (misal google/gemini-2.5-flash -> gemini-2.5-flash)
       const cleanModel = model.includes('/') ? model.split('/').pop() : model;
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${apiKey}`;
       
@@ -121,8 +148,17 @@ export async function generateAIContent(messages: AIMessage[]): Promise<string> 
       if (!reply) throw new Error('API Gemini tidak mengembalikan konten teks.');
       return reply;
     } else {
-      // OpenRouter API
-      const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+      // OpenAI-compatible API (openai, deepseek, groq, openrouter)
+      const endpoint = getProviderEndpoint(provider);
+      const headers: HeadersInit = {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      };
+
+      if (provider === 'openrouter') {
+        headers['HTTP-Referer'] = 'https://fictify.com';
+        headers['X-Title'] = 'Fictify';
+      }
       
       const payloadMessages = messages.map(msg => ({
         role: msg.role === 'model' ? 'assistant' : 'user',
@@ -131,12 +167,7 @@ export async function generateAIContent(messages: AIMessage[]): Promise<string> 
 
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://fictify.com',
-          'X-Title': 'Fictify'
-        },
+        headers: headers,
         body: JSON.stringify({
           model: model,
           messages: payloadMessages,
@@ -151,7 +182,7 @@ export async function generateAIContent(messages: AIMessage[]): Promise<string> 
 
       const data = await response.json();
       const reply = data.choices?.[0]?.message?.content;
-      if (!reply) throw new Error('OpenRouter tidak mengembalikan konten teks.');
+      if (!reply) throw new Error('API tidak mengembalikan konten teks.');
       return reply;
     }
   } catch (error: any) {

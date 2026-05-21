@@ -13,16 +13,45 @@ const GEMINI_MODELS = [
   { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', desc: 'Pemikiran tingkat lanjut - Sempurna untuk plot twist & dunia kompleks.' }
 ];
 
+const OPENAI_MODELS = [
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', desc: 'Sangat cepat, cerdas, dan hemat biaya - Sempurna untuk draf novel awal.' },
+  { id: 'gpt-4o', name: 'GPT-4o (Flagship)', desc: 'Model unggulan OpenAI dengan kreativitas tinggi, kosa kata kaya, dan analisis adegan yang tajam.' },
+  { id: 'o1-mini', name: 'OpenAI o1 Mini', desc: 'Model penalaran logika cepat, luar biasa untuk menyusun peta alur cerita yang kompleks.' }
+];
+
+const DEEPSEEK_MODELS = [
+  { id: 'deepseek-chat', name: 'DeepSeek Chat (V3)', desc: 'Model andalan DeepSeek - performa sangat cerdas, tulisan mengalir natural dengan harga sangat terjangkau.' },
+  { id: 'deepseek-reasoner', name: 'DeepSeek Reasoner (R1)', desc: 'Model penalaran R1 - memikirkan alur logika cerita yang rumit secara bertahap sebelum menulis.' }
+];
+
+const GROQ_MODELS = [
+  { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (via Groq)', desc: 'Model Llama termutakhir dari Meta dengan kecepatan generasi super kilat dari Groq.' },
+  { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B (via Groq)', desc: 'Model Mixture-of-Experts yang cepat dengan kapasitas ingatan konteks cerita yang luas.' }
+];
+
 const OPENROUTER_MODELS = [
   { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash (via OpenRouter)', desc: 'Kecepatan tinggi dengan respons cerdas.' },
   { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro (via OpenRouter)', desc: 'Analitis mendalam & gaya penulisan kreatif.' },
-  { id: 'anthropic/claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', desc: 'Kualitas sastra tertinggi, dialog sangat natural.' },
+  { id: 'anthropic/claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', desc: 'Kualitas sastra tertinggi, dialog sangat natural, pilihan nomor satu sastrawan.' },
   { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat (V3)', desc: 'Biaya super murah dengan kecerdasan setingkat GPT-4.' },
-  { id: 'meta-llama/llama-3.1-405b-instruct', name: 'Llama 3.1 405B', desc: 'Model open-source terbesar untuk instruksi kompleks.' }
+  { id: 'meta-llama/llama-3.1-405b-instruct', name: 'Llama 3.1 405B', desc: 'Model open-source terbesar untuk instruksi cerita kompleks.' }
 ];
 
+type AIProvider = 'gemini' | 'openai' | 'deepseek' | 'groq' | 'openrouter';
+
+const getModelsForProvider = (prov: AIProvider) => {
+  switch (prov) {
+    case 'gemini': return GEMINI_MODELS;
+    case 'openai': return OPENAI_MODELS;
+    case 'deepseek': return DEEPSEEK_MODELS;
+    case 'groq': return GROQ_MODELS;
+    case 'openrouter': return OPENROUTER_MODELS;
+    default: return GEMINI_MODELS;
+  }
+};
+
 export default function APISettings({ isOpen, onClose, onSaveNotify }: APISettingsProps) {
-  const [provider, setProvider] = useState<'gemini' | 'openrouter'>('gemini');
+  const [provider, setProvider] = useState<AIProvider>('gemini');
   const [apiKey, setApiKey] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
   const [isCustomModel, setIsCustomModel] = useState(false);
@@ -36,14 +65,14 @@ export default function APISettings({ isOpen, onClose, onSaveNotify }: APISettin
   // Load existing configuration on open
   useEffect(() => {
     if (isOpen) {
-      const savedProvider = (localStorage.getItem('gemini-api-provider') as 'gemini' | 'openrouter') || 'gemini';
+      const savedProvider = (localStorage.getItem('gemini-api-provider') as AIProvider) || 'gemini';
       const savedKey = localStorage.getItem('gemini-api-key') || '';
       const savedModel = localStorage.getItem('gemini-api-model') || '';
 
       setProvider(savedProvider);
       setApiKey(savedKey);
       
-      const presets = savedProvider === 'gemini' ? GEMINI_MODELS : OPENROUTER_MODELS;
+      const presets = getModelsForProvider(savedProvider);
       const isPreset = presets.some(m => m.id === savedModel);
 
       if (savedModel && !isPreset) {
@@ -62,10 +91,10 @@ export default function APISettings({ isOpen, onClose, onSaveNotify }: APISettin
   }, [isOpen]);
 
   // Handle provider changes to reset presets
-  const handleProviderChange = (newProvider: 'gemini' | 'openrouter') => {
+  const handleProviderChange = (newProvider: AIProvider) => {
     setProvider(newProvider);
     setIsCustomModel(false);
-    const presets = newProvider === 'gemini' ? GEMINI_MODELS : OPENROUTER_MODELS;
+    const presets = getModelsForProvider(newProvider);
     setSelectedModel(presets[0].id);
     setTestStatus('idle');
   };
@@ -91,7 +120,7 @@ export default function APISettings({ isOpen, onClose, onSaveNotify }: APISettin
         setTestStatus('success');
       } else {
         setTestStatus('error');
-        setTestErrorMessage('Koneksi berhasil tetapi server mengembalikan draf kosong.');
+        setTestErrorMessage('Koneksi berhasil tetapi server mengembalikan respons kosong.');
       }
     } catch (err: any) {
       setTestStatus('error');
@@ -132,7 +161,7 @@ export default function APISettings({ isOpen, onClose, onSaveNotify }: APISettin
 
   if (!isOpen) return null;
 
-  const currentPresets = provider === 'gemini' ? GEMINI_MODELS : OPENROUTER_MODELS;
+  const currentPresets = getModelsForProvider(provider);
   const activeModelDesc = currentPresets.find(m => m.id === selectedModel)?.desc || '';
 
   return (
@@ -161,31 +190,70 @@ export default function APISettings({ isOpen, onClose, onSaveNotify }: APISettin
           {/* Provider Selector */}
           <div>
             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2">Penyedia Layanan (AI Provider)</label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
                 onClick={() => handleProviderChange('gemini')}
-                className={`py-3 px-4 rounded-xl border text-sm font-semibold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                className={`py-2 px-3 rounded-xl border text-xs font-semibold flex flex-col items-center text-center gap-1 transition-all cursor-pointer ${
                   provider === 'gemini'
                     ? 'bg-purple-950/20 border-purple-500 text-purple-300 shadow-md shadow-purple-500/5'
                     : 'bg-gray-900/40 border-gray-800 text-gray-400 hover:bg-gray-900 hover:text-gray-300'
                 }`}
               >
-                <span className="text-base font-bold">Google Gemini Direct</span>
-                <span className="text-[9px] text-gray-500 font-medium">Sambungan langsung berlatensi rendah</span>
+                <span className="text-sm font-bold">Google Gemini</span>
+                <span className="text-[9px] text-gray-500 font-medium">Direct low-latency access</span>
               </button>
-              
+
+              <button
+                type="button"
+                onClick={() => handleProviderChange('openai')}
+                className={`py-2 px-3 rounded-xl border text-xs font-semibold flex flex-col items-center text-center gap-1 transition-all cursor-pointer ${
+                  provider === 'openai'
+                    ? 'bg-emerald-950/20 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-500/5'
+                    : 'bg-gray-900/40 border-gray-800 text-gray-400 hover:bg-gray-900 hover:text-gray-300'
+                }`}
+              >
+                <span className="text-sm font-bold">OpenAI Direct</span>
+                <span className="text-[9px] text-gray-500 font-medium">GPT-4o & GPT-4o-Mini</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleProviderChange('deepseek')}
+                className={`py-2 px-3 rounded-xl border text-xs font-semibold flex flex-col items-center text-center gap-1 transition-all cursor-pointer ${
+                  provider === 'deepseek'
+                    ? 'bg-blue-950/20 border-blue-500 text-blue-300 shadow-md shadow-blue-500/5'
+                    : 'bg-gray-900/40 border-gray-800 text-gray-400 hover:bg-gray-900 hover:text-gray-300'
+                }`}
+              >
+                <span className="text-sm font-bold">DeepSeek Direct</span>
+                <span className="text-[9px] text-gray-500 font-medium">Ultra-cheap R1 & V3</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleProviderChange('groq')}
+                className={`py-2 px-3 rounded-xl border text-xs font-semibold flex flex-col items-center text-center gap-1 transition-all cursor-pointer ${
+                  provider === 'groq'
+                    ? 'bg-orange-950/20 border-orange-500 text-orange-300 shadow-md shadow-orange-500/5'
+                    : 'bg-gray-900/40 border-gray-800 text-gray-400 hover:bg-gray-900 hover:text-gray-300'
+                }`}
+              >
+                <span className="text-sm font-bold">Groq Cloud</span>
+                <span className="text-[9px] text-gray-500 font-medium">Super-fast open-source</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => handleProviderChange('openrouter')}
-                className={`py-3 px-4 rounded-xl border text-sm font-semibold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                className={`py-2.5 px-3 rounded-xl border text-xs font-semibold flex flex-col items-center text-center gap-1 transition-all cursor-pointer col-span-2 ${
                   provider === 'openrouter'
                     ? 'bg-indigo-950/20 border-indigo-500 text-indigo-300 shadow-md shadow-indigo-500/5'
                     : 'bg-gray-900/40 border-gray-800 text-gray-400 hover:bg-gray-900 hover:text-gray-300'
                 }`}
               >
-                <span className="text-base font-bold">OpenRouter API</span>
-                <span className="text-[9px] text-gray-500 font-medium">Buka Claude, Llama & GPT-4o</span>
+                <span className="text-sm font-bold">OpenRouter API</span>
+                <span className="text-[9px] text-gray-500 font-medium">Claude 3.5 Sonnet, Llama & 100+ Models</span>
               </button>
             </div>
           </div>
@@ -207,7 +275,12 @@ export default function APISettings({ isOpen, onClose, onSaveNotify }: APISettin
                 value={apiKey}
                 onChange={e => setApiKey(e.target.value)}
                 className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-gray-200 text-sm font-mono focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/30 transition-all pr-12 placeholder-gray-600"
-                placeholder={provider === 'gemini' ? 'AIzaSy...' : 'sk-or-v1-...'}
+                placeholder={
+                  provider === 'gemini' ? 'AIzaSy...' :
+                  provider === 'openai' ? 'sk-proj-...' :
+                  provider === 'deepseek' ? 'sk-...' :
+                  provider === 'groq' ? 'gsk_...' : 'sk-or-v1-...'
+                }
               />
               <button
                 type="button"
@@ -242,7 +315,12 @@ export default function APISettings({ isOpen, onClose, onSaveNotify }: APISettin
                   value={customModelId}
                   onChange={e => setCustomModelId(e.target.value)}
                   className="w-full bg-gray-950 border border-gray-850 rounded-lg px-3 py-2 text-gray-200 text-xs font-mono focus:outline-none focus:border-purple-500 transition-all placeholder-gray-600"
-                  placeholder={provider === 'gemini' ? 'gemini-2.5-pro' : 'openai/gpt-4o-mini'}
+                  placeholder={
+                    provider === 'gemini' ? 'gemini-2.5-pro' :
+                    provider === 'openai' ? 'gpt-4o' :
+                    provider === 'deepseek' ? 'deepseek-chat' :
+                    provider === 'groq' ? 'llama3-8b-8192' : 'openai/gpt-4o-mini'
+                  }
                 />
                 <span className="text-[9px] text-gray-500 mt-1 flex items-center gap-1">
                   <Info className="w-2.5 h-2.5" /> ID model harus sesuai dengan nama model resmi di penyedia.
