@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Fase 14: Print-Ready PDF Styling */
+@media print {
+  body, html {
+    background-color: white !important;
+    color: black !important;
+  }
+
+  /* Sembunyikan elemen UI yang tidak perlu dicetak */
+  .w-64, /* Sidebar */
+  .h-14, /* Topbar */
+  .absolute, /* Zen mode button */
+  .fixed, /* Toasts */
+  button {
+    display: none !important;
+  }
+
+  /* Buat editor memenuhi halaman putih */
+  #root, .flex-1, .max-w-3xl {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Styling khusus font buku fisik */
+  .prose {
+    color: black !important;
+    font-family: 'Georgia', 'Times New Roman', serif !important;
+    font-size: 12pt !important;
+    line-height: 1.6 !important;
+    padding: 2cm !important;
+  }
+
+  /* Page break antar bab jika diprint masal nantinya */
+  .chapter-container {
+    page-break-after: always;
+  }
+}
