@@ -598,14 +598,14 @@ export default function App() {
             </button>
 
             {/* Actions Panel */}
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+            <div className="flex items-center gap-0.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity ml-1">
               {isFolder && (
                 <button 
                   onClick={() => addChapter(node.id)} 
-                  className="p-1 text-gray-500 hover:text-purple-400" 
+                  className="p-1.5 lg:p-1 text-gray-500 hover:text-purple-400" 
                   title="Tambah Bab"
                 >
-                  <Plus className="w-3 h-3" />
+                  <Plus className="w-3.5 h-3.5 lg:w-3 lg:h-3" />
                 </button>
               )}
               
@@ -614,7 +614,7 @@ export default function App() {
                 value={node.parentId || 'root'}
                 onChange={(e) => moveNode(node.id, e.target.value, e)}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-gray-900 text-gray-500 text-[9px] rounded border border-gray-800 py-0.2 px-0.5 max-w-[48px] focus:outline-none"
+                className="bg-gray-900 text-gray-500 text-[9px] lg:text-[9px] rounded border border-gray-800 py-0.5 lg:py-0.2 px-1 lg:px-0.5 max-w-[56px] lg:max-w-[48px] focus:outline-none"
                 title="Pindahkan..."
               >
                 <option value="root">Root</option>
@@ -623,11 +623,11 @@ export default function App() {
                 ))}
               </select>
 
-              <button onClick={(e) => renameNode(node.id, node.title, e)} className="p-0.5 text-gray-500 hover:text-blue-400" title="Ubah Nama">
-                <Pencil className="w-3 h-3" />
+              <button onClick={(e) => renameNode(node.id, node.title, e)} className="p-1.5 lg:p-0.5 text-gray-500 hover:text-blue-400" title="Ubah Nama">
+                <Pencil className="w-3.5 h-3.5 lg:w-3 lg:h-3" />
               </button>
-              <button onClick={(e) => deleteNode(node.id, e)} className="p-0.5 text-gray-500 hover:text-red-400" title="Hapus">
-                <Trash2 className="w-3 h-3" />
+              <button onClick={(e) => deleteNode(node.id, e)} className="p-1.5 lg:p-0.5 text-gray-500 hover:text-red-400" title="Hapus">
+                <Trash2 className="w-3.5 h-3.5 lg:w-3 lg:h-3" />
               </button>
             </div>
           </div>
