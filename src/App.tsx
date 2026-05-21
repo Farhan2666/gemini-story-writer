@@ -37,6 +37,8 @@ export default function App() {
   const [wordGoal, setWordGoal] = useState(500);
   const [isApiSettingsOpen, setIsApiSettingsOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
 
   // Cloud State
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -53,6 +55,8 @@ export default function App() {
     setToastMessage(message);
     setTimeout(() => setToastMessage(null), 3000);
   };
+
+  const closeSidebar = () => setIsSidebarOpen(false);
 
   const editor = useEditor({
     extensions: [
@@ -524,22 +528,22 @@ export default function App() {
       );
     }
     return (
-      <div className={`flex-1 overflow-auto p-8 relative transition-all duration-500 ${isZenMode ? 'bg-black' : ''}`}>
+      <div className={`flex-1 overflow-auto p-3 sm:p-6 lg:p-8 relative transition-all duration-500 ${isZenMode ? 'bg-black' : ''}`}>
         <div className={`max-w-3xl mx-auto rounded-xl shadow-xl overflow-hidden relative transition-all duration-500 ${isZenMode ? 'bg-black border-transparent' : 'bg-gray-800/30 border border-gray-700/50'}`}>
            <EditorContent editor={editor} className="min-h-[60vh] max-h-[70vh] overflow-y-auto" />
            
            {isGenerating && (
-              <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-10">
-                <div className="flex items-center gap-3 bg-gray-800 px-6 py-4 rounded-xl shadow-2xl border border-purple-500/30">
-                  <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
-                  <span className="text-purple-100 font-medium">Gemini sedang merangkai cerita...</span>
-                </div>
-              </div>
-           )}
-        </div>
-      </div>
-    );
-  };
+               <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-10">
+                 <div className="flex items-center gap-3 bg-gray-800 px-6 py-4 rounded-xl shadow-2xl border border-purple-500/30">
+                   <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
+                   <span className="text-purple-100 font-medium">Gemini sedang merangkai cerita...</span>
+                 </div>
+               </div>
+            )}
+         </div>
+       </div>
+     );
+   };
 
   const activeChapterTitle = nodes.find(n => n.id === activeChapterId && n.type === 'chapter')?.title || 'Bab';
 
@@ -644,7 +648,17 @@ export default function App() {
       
       {/* Sidebar */}
       {!isZenMode && (
-        <div className="w-64 bg-gray-950 border-r border-gray-850 flex flex-col justify-between shrink-0">
+        <>
+          {/* Mobile overlay */}
+          {isSidebarOpen && (
+            <div 
+              className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+              onClick={closeSidebar}
+            />
+          )}
+          <div className={`fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto w-64 bg-gray-950 border-r border-gray-850 flex flex-col shrink-0 transition-transform duration-300 ${
+            isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          }`}>
           
           {/* Top of Sidebar */}
           <div className="flex-1 overflow-y-auto flex flex-col">
@@ -666,13 +680,13 @@ export default function App() {
               <nav className="space-y-1">
                 <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 px-2">Memulai</h3>
                 <button 
-                  onClick={() => setActiveTab('cover')}
+                  onClick={() => { setActiveTab('cover'); closeSidebar(); }}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-left font-medium transition-colors mb-1 ${activeTab === 'cover' ? 'bg-pink-950/30 text-pink-400 border border-pink-500/20' : 'bg-pink-900/5 hover:bg-pink-900/25 text-pink-400/90 border border-transparent'}`}
                 >
                   <ImageIcon className="w-3.5 h-3.5" /> Sampul Buku
                 </button>
                 <button 
-                  onClick={() => setActiveTab('outliner')}
+                  onClick={() => { setActiveTab('outliner'); closeSidebar(); }}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-left font-medium transition-colors ${activeTab === 'outliner' ? 'bg-indigo-950/30 text-indigo-400 border border-indigo-500/20' : 'bg-purple-950/15 hover:bg-purple-950/30 text-purple-400 border border-purple-500/10'}`}
                 >
                   <Wand2 className="w-3.5 h-3.5" /> AI Outliner
@@ -682,31 +696,31 @@ export default function App() {
               <nav className="space-y-1">
                 <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 px-2">Riset & Peta</h3>
                 <button 
-                  onClick={() => setActiveTab('world')}
+                  onClick={() => { setActiveTab('world'); closeSidebar(); }}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-left transition-colors ${activeTab === 'world' ? 'bg-gray-900 text-purple-400 border border-gray-850' : 'hover:bg-gray-900/40 text-gray-400 border border-transparent'}`}
                 >
                   <Globe className="w-3.5 h-3.5" /> Aturan Dunia
                 </button>
                 <button 
-                  onClick={() => setActiveTab('character')}
+                  onClick={() => { setActiveTab('character'); closeSidebar(); }}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-left transition-colors ${activeTab === 'character' ? 'bg-gray-900 text-purple-400 border border-gray-850' : 'hover:bg-gray-900/40 text-gray-400 border border-transparent'}`}
                 >
                   <Users className="w-3.5 h-3.5" /> Daftar Karakter
                 </button>
                 <button 
-                  onClick={() => setActiveTab('mindmap')}
+                  onClick={() => { setActiveTab('mindmap'); closeSidebar(); }}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-left font-medium transition-colors ${activeTab === 'mindmap' ? 'bg-purple-950/30 text-purple-400 border border-purple-500/20' : 'hover:bg-gray-900/40 text-gray-400 border border-transparent'}`}
                 >
                   <Network className="w-3.5 h-3.5" /> Peta Hubungan
                 </button>
                 <button 
-                  onClick={() => setActiveTab('chat')}
+                  onClick={() => { setActiveTab('chat'); closeSidebar(); }}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-left transition-colors ${activeTab === 'chat' ? 'bg-gray-900 text-purple-400 border border-gray-850' : 'hover:bg-gray-900/40 text-gray-400 border border-transparent'}`}
                 >
                   <MessageSquare className="w-3.5 h-3.5" /> Diskusi AI (Co-Pilot)
                 </button>
                 <button 
-                  onClick={() => setActiveTab('notes')}
+                  onClick={() => { setActiveTab('notes'); closeSidebar(); }}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-left transition-colors ${activeTab === 'notes' ? 'bg-gray-900 text-purple-400 border border-gray-850' : 'hover:bg-gray-900/40 text-gray-400 border border-transparent'}`}
                 >
                   <PenTool className="w-3.5 h-3.5" /> Catatan Ide
@@ -755,7 +769,7 @@ export default function App() {
           {/* Bottom of Sidebar: Login/Cloud Sync Status widget */}
           <div className="p-3 border-t border-gray-900 bg-gray-950 shrink-0">
             <button
-              onClick={() => setActiveTab('cloud')}
+              onClick={() => { setActiveTab('cloud'); closeSidebar(); }}
               className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-left ${
                 user 
                   ? 'bg-purple-950/15 border-purple-500/20 hover:bg-purple-950/30' 
@@ -794,30 +808,42 @@ export default function App() {
             </button>
           </div>
 
-        </div>
+          </div>
+        </>
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden pb-16 lg:pb-0">
         {/* Topbar */}
         {!isZenMode && (
-          <div className="h-14 border-b border-gray-850 bg-gray-900/30 backdrop-blur flex items-center justify-between px-6 shrink-0">
-            <h2 className="text-sm font-semibold text-gray-300">
-              {activeTab === 'world' ? 'Aturan Dunia Novel' : 
-               activeTab === 'character' ? 'Daftar Tokoh Cerita' : 
-               activeTab === 'chat' ? 'Diskusi Penulisan AI' :
-               activeTab === 'notes' ? 'Ide & Corat-coret' :
-               activeTab === 'outliner' ? 'Pembuat Kerangka Cerita AI' :
-               activeTab === 'cover' ? 'Pembuat Sampul Buku AI' :
-               activeTab === 'mindmap' ? 'Peta Hubungan Tokoh' :
-               activeTab === 'cloud' ? 'Manajemen Sinkronisasi GeminiCloud' :
-               `Sedang Menulis: ${activeChapterTitle}`}
-            </h2>
+          <div className="h-14 border-b border-gray-850 bg-gray-900/30 backdrop-blur flex items-center justify-between px-3 lg:px-6 shrink-0">
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="lg:hidden p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+                title="Open menu"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <h2 className="text-sm font-semibold text-gray-300 truncate max-w-[120px] sm:max-w-xs">
+                {activeTab === 'world' ? 'Aturan Dunia Novel' : 
+                 activeTab === 'character' ? 'Daftar Tokoh Cerita' : 
+                 activeTab === 'chat' ? 'Diskusi Penulisan AI' :
+                 activeTab === 'notes' ? 'Ide & Corat-coret' :
+                 activeTab === 'outliner' ? 'Pembuat Kerangka Cerita AI' :
+                 activeTab === 'cover' ? 'Pembuat Sampul Buku AI' :
+                 activeTab === 'mindmap' ? 'Peta Hubungan Tokoh' :
+                 activeTab === 'cloud' ? 'Manajemen Sinkronisasi GeminiCloud' :
+                 `Sedang Menulis: ${activeChapterTitle}`}
+              </h2>
+            </div>
+            <div className="flex items-center gap-1.5 lg:gap-3">
               {activeTab === 'chapter' && (
                 <button 
                   onClick={handleSpeak}
-                  className={`flex items-center justify-center p-1.5 rounded-full transition-colors mr-2 ${isSpeaking ? 'bg-blue-500 text-white animate-pulse' : 'text-gray-400 hover:text-blue-400 hover:bg-blue-900/30'}`}
+                  className={`flex items-center justify-center p-1.5 rounded-full transition-colors ${isSpeaking ? 'bg-blue-500 text-white animate-pulse' : 'text-gray-400 hover:text-blue-400 hover:bg-blue-900/30'}`}
                   title="Bacakan Cerita (Text-to-Speech)"
                 >
                   <Volume2 className="w-4 h-4" />
@@ -835,7 +861,7 @@ export default function App() {
                       }
                     }
                   }}
-                  className="flex items-center gap-2 bg-gray-900/80 pl-3 pr-2 py-1.5 rounded-lg text-xs text-gray-400 font-semibold mr-2 border border-gray-850 relative overflow-hidden group cursor-pointer"
+                  className="hidden sm:flex items-center gap-2 bg-gray-900/80 pl-3 pr-2 py-1.5 rounded-lg text-xs text-gray-400 font-semibold border border-gray-850 relative overflow-hidden group cursor-pointer"
                   title={`Klik untuk mengubah target harian. Saat ini: ${wordCount} / ${wordGoal} kata`}
                 >
                   <Target className="w-3.5 h-3.5 text-yellow-500 animate-pulse relative z-10" />
@@ -849,24 +875,35 @@ export default function App() {
               {activeTab === 'chapter' && (
                 <button 
                   onClick={() => setIsZenMode(true)}
-                  className="flex items-center gap-2 bg-indigo-950/20 hover:bg-indigo-900/30 text-indigo-400 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors border border-indigo-500/10"
+                  className="hidden sm:flex items-center gap-2 bg-indigo-950/20 hover:bg-indigo-900/30 text-indigo-400 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors border border-indigo-500/10"
                   title="Fokus Mode"
                 >
                   <Maximize2 className="w-3.5 h-3.5" /> Zen
                 </button>
               )}
+              {activeTab === 'chapter' && (
+                <button 
+                  onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
+                  className="lg:hidden flex items-center justify-center p-1.5 text-gray-400 hover:text-purple-400 hover:bg-gray-800 rounded-lg transition-colors"
+                  title="Toggle AI Panel"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                </button>
+              )}
               <button 
                 onClick={handleExport}
-                className="flex items-center gap-2 bg-gray-900 hover:bg-gray-850 text-gray-300 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-colors border border-gray-850"
+                className="flex items-center gap-2 bg-gray-900 hover:bg-gray-850 text-gray-300 px-2 lg:px-3.5 py-1.5 rounded-md text-xs font-semibold transition-colors border border-gray-850"
               >
-                <Download className="w-3.5 h-3.5" /> Ekspor (.txt)
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Ekspor (.txt)</span>
               </button>
               {activeTab === 'chapter' && (
                 <button 
                   onClick={saveStory}
-                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-4 py-1.5 rounded-md text-xs font-bold shadow-lg shadow-purple-900/20 transition-all cursor-pointer"
+                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-2 lg:px-4 py-1.5 rounded-md text-xs font-bold shadow-lg shadow-purple-900/20 transition-all cursor-pointer"
                 >
-                  <Save className="w-3.5 h-3.5" /> Simpan
+                  <Save className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Simpan</span>
                 </button>
               )}
             </div>
@@ -923,14 +960,38 @@ export default function App() {
         const prevChapter = getPreviousChapter();
 
         return (
-          <AIPanel 
-            editor={editor} 
-            isGenerating={isGenerating} 
-            setIsGenerating={setIsGenerating} 
-            currentChapterTitle={activeChapterTitle}
-            previousChapterTitle={prevChapter?.title}
-            previousChapterContent={prevChapter?.content}
-          />
+          <>
+            {/* Mobile overlay for right panel */}
+            {isRightPanelOpen && (
+              <div 
+                className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+                onClick={() => setIsRightPanelOpen(false)}
+              />
+            )}
+            <div className={`fixed lg:relative inset-y-0 right-0 z-50 lg:z-auto w-80 lg:w-[28rem] bg-gray-950 border-l border-gray-850 flex flex-col shrink-0 transition-transform duration-300 ${
+              isRightPanelOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
+            }`}>
+              <div className="flex items-center justify-between p-3 border-b border-gray-850 lg:hidden">
+                <span className="text-sm font-semibold text-gray-300">AI Assistant</span>
+                <button 
+                  onClick={() => setIsRightPanelOpen(false)}
+                  className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <AIPanel 
+                editor={editor} 
+                isGenerating={isGenerating} 
+                setIsGenerating={setIsGenerating} 
+                currentChapterTitle={activeChapterTitle}
+                previousChapterTitle={prevChapter?.title}
+                previousChapterContent={prevChapter?.content}
+              />
+            </div>
+          </>
         );
       })()}
 
@@ -943,9 +1004,52 @@ export default function App() {
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-emerald-400 border border-emerald-500/20 px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-2.5 animate-in slide-in-from-bottom-5 fade-in duration-300 z-50 backdrop-blur-md">
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-gray-900 text-emerald-400 border border-emerald-500/20 px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-2.5 animate-in slide-in-from-bottom-5 fade-in duration-300 z-50 backdrop-blur-md">
           <UserCheck className="w-4 h-4" />
           <span className="text-xs font-bold">{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Mobile Bottom Navigation */}
+      {!isZenMode && (
+        <div className="fixed bottom-0 left-0 right-0 z-30 lg:hidden bg-gray-950/95 backdrop-blur border-t border-gray-850 safe-area-bottom">
+          <div className="flex items-center justify-around py-2 px-1">
+            <button 
+              onClick={() => { setActiveTab('chapter'); closeSidebar(); }}
+              className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors min-w-[48px] ${activeTab === 'chapter' ? 'text-purple-400' : 'text-gray-500'}`}
+            >
+              <FileText className="w-5 h-5" />
+              <span className="text-[10px]">Tulis</span>
+            </button>
+            <button 
+              onClick={() => { setActiveTab('character'); closeSidebar(); }}
+              className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors min-w-[48px] ${activeTab === 'character' ? 'text-purple-400' : 'text-gray-500'}`}
+            >
+              <Users className="w-5 h-5" />
+              <span className="text-[10px]">Karakter</span>
+            </button>
+            <button 
+              onClick={() => { setActiveTab('chat'); closeSidebar(); }}
+              className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors min-w-[48px] ${activeTab === 'chat' ? 'text-purple-400' : 'text-gray-500'}`}
+            >
+              <MessageSquare className="w-5 h-5" />
+              <span className="text-[10px]">AI Chat</span>
+            </button>
+            <button 
+              onClick={() => { setActiveTab('notes'); closeSidebar(); }}
+              className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors min-w-[48px] ${activeTab === 'notes' ? 'text-purple-400' : 'text-gray-500'}`}
+            >
+              <PenTool className="w-5 h-5" />
+              <span className="text-[10px]">Catatan</span>
+            </button>
+            <button 
+              onClick={() => { setActiveTab('cloud'); closeSidebar(); }}
+              className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-colors min-w-[48px] ${activeTab === 'cloud' ? 'text-purple-400' : 'text-gray-500'}`}
+            >
+              <Cloud className="w-5 h-5" />
+              <span className="text-[10px]">Cloud</span>
+            </button>
+          </div>
         </div>
       )}
     </div>
