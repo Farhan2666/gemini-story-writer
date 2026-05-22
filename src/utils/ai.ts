@@ -109,7 +109,10 @@ export async function testAIConnection(
 }
 
 // Panggilan utama untuk menghasilkan konten AI
-export async function generateAIContent(messages: AIMessage[]): Promise<string> {
+export async function generateAIContent(
+  messages: AIMessage[],
+  temperature: number = 0.7
+): Promise<string> {
   const { provider, apiKey, model } = getAISettings();
 
   if (!apiKey.trim()) {
@@ -133,7 +136,7 @@ export async function generateAIContent(messages: AIMessage[]): Promise<string> 
         body: JSON.stringify({
           contents: payloadContents,
           generationConfig: {
-            temperature: 0.7
+            temperature
           }
         })
       });
@@ -171,7 +174,7 @@ export async function generateAIContent(messages: AIMessage[]): Promise<string> 
         body: JSON.stringify({
           model: model,
           messages: payloadMessages,
-          temperature: 0.7
+          temperature
         })
       });
 

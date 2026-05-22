@@ -62,6 +62,19 @@ export default function AIPanel({
       let promptText = '';
 
       if (promptType === 'continue') {
+         // Parse ringkasan dari Outliner
+         const currentContent = editor.getHTML();
+         const tempDivParse = document.createElement('div');
+         tempDivParse.innerHTML = currentContent;
+         let chapterSummary = '';
+         const allH2 = tempDivParse.querySelectorAll('h2');
+         allH2.forEach(h2 => {
+           if (h2.textContent?.includes('Ringkasan Plot')) {
+             const next = h2.nextElementSibling;
+             if (next) chapterSummary = next.textContent || '';
+           }
+         });
+
          let previousChContext = '';
          if (previousChapterTitle && previousChapterContent) {
            const tempDiv = document.createElement('div');
@@ -74,10 +87,14 @@ export default function AIPanel({
              .trim();
 
            if (cleanPrev.length > 10) {
-             const sampleText = cleanPrev.length > 2000 
-               ? '... ' + cleanPrev.substring(cleanPrev.length - 2000) 
-               : cleanPrev;
-             previousChContext = `--- ISI AKHIR BAB SEBELUMNYA (${previousChapterTitle}) ---\n${sampleText}\n-------------------------------------------------\n\n`;
+              const MAX_PREV = 8000;
+              let sampleText = cleanPrev;
+              if (cleanPrev.length > MAX_PREV) {
+                const head = cleanPrev.substring(0, 4000);
+                const tail = cleanPrev.substring(cleanPrev.length - 4000);
+                sampleText = `${head}\n\n[...${cleanPrev.length - 8000} karakter dilewati...]\n\n${tail}`;
+              }
+             previousChContext = `--- ISI BAB SEBELUMNYA: ${previousChapterTitle} ---\n${sampleText}\n-------------------------------------------------\n\n`;
            }
          }
 
@@ -85,7 +102,7 @@ export default function AIPanel({
            ? `--- BAB SAAT INI YANG SEDANG DITULIS: ${currentChapterTitle} ---\n\n` 
            : '';
 
-         promptText = `${contextStr}${previousChContext}${activeChHeader}Kamu adalah seorang novelis/sastrawan Indonesia kontemporer berbakat besar. Gaya menulismu sangat organik, hidup, realistis, dan emosional, sangat jauh dari gaya tulisan AI yang klise, kaku, atau seragam.
+         promptText = `${chapterSummary ? `[RENCANA BAB INI]: ${chapterSummary}\n\n` : ''}${contextStr}${previousChContext}${activeChHeader}Kamu adalah seorang novelis/sastrawan Indonesia kontemporer berbakat besar. Gaya menulismu sangat organik, hidup, realistis, dan emosional, sangat jauh dari gaya tulisan AI yang klise, kaku, atau seragam.
 
 Berdasarkan konteks dunia, karakter, dan cerita yang sudah ada di bawah, lanjutkan cerita untuk "${currentChapterTitle || 'Bab Aktif'}" dengan mematuhi aturan penulisan manusia berikut secara MUTLAK:
 
@@ -126,7 +143,8 @@ Teks yang akan diperbaiki:
          promptText = `${contextStr}Berdasarkan cerita berikut dan aturan dunia di atas, berikan 3 ide konflik atau plot twist yang bisa terjadi selanjutnya yang orisinal, mengejutkan, dan tidak klise seperti pola cerita AI standard:\n\n${currentText}`;
       }
 
-      const aiResult = await generateAIContent([{ role: 'user', text: promptText }]);
+      const temps: Record<string, number> = { continue: 0.4, improve: 0.3, idea: 0.85 };
+      const aiResult = await generateAIContent([{ role: 'user', text: promptText }], temps[promptType] ?? 0.7);
 
       if (promptType === 'idea') {
         alert(aiResult); 
