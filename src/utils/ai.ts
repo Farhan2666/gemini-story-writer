@@ -13,8 +13,8 @@ const FALLBACK_GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 
 // Mengambil pengaturan aktif dari localStorage dengan fallback ke .env.local
 export function getAISettings(): AISettings {
-  const provider = (localStorage.getItem('gemini-api-provider') as 'gemini' | 'openai' | 'deepseek' | 'groq' | 'openrouter') || 'gemini';
-  const apiKey = localStorage.getItem('gemini-api-key') || FALLBACK_GEMINI_KEY;
+  const provider = (localStorage.getItem('fictify-api-provider') as 'gemini' | 'openai' | 'deepseek' | 'groq' | 'openrouter') || 'gemini';
+  const apiKey = localStorage.getItem('fictify-api-key') || FALLBACK_GEMINI_KEY;
   
   let defaultModel = 'gemini-2.5-flash';
   if (provider === 'openai') defaultModel = 'gpt-4o-mini';
@@ -22,7 +22,7 @@ export function getAISettings(): AISettings {
   else if (provider === 'groq') defaultModel = 'llama-3.3-70b-versatile';
   else if (provider === 'openrouter') defaultModel = 'google/gemini-2.5-flash';
 
-  const model = localStorage.getItem('gemini-api-model') || defaultModel;
+  const model = localStorage.getItem('fictify-api-model') || defaultModel;
   
   return { provider, apiKey, model };
 }
