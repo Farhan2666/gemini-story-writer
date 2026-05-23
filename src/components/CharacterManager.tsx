@@ -15,7 +15,7 @@ export default function CharacterManager() {
   const [newChar, setNewChar] = useState({ name: '', role: '', background: '', imageUrl: '' });
 
   useEffect(() => {
-    const saved = localStorage.getItem('gemini-characters');
+    const saved = localStorage.getItem('fictify-characters');
     if (saved) {
       try {
         setCharacters(JSON.parse(saved));
@@ -25,7 +25,7 @@ export default function CharacterManager() {
 
   const saveToLocal = (data: Character[]) => {
     setCharacters(data);
-    localStorage.setItem('gemini-characters', JSON.stringify(data));
+    localStorage.setItem('fictify-characters', JSON.stringify(data));
   };
 
   const handleAdd = () => {
