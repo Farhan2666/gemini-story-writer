@@ -6,7 +6,8 @@ import {
   Globe, Users, Save, Loader2, Plus, Download, FileText, Pencil, 
   Trash2, MessageSquare, PenTool, DatabaseBackup, Upload, Wand2, 
   Maximize2, Minimize2, Volume2, Target, Image as ImageIcon,
-  Folder, FolderOpen, Network, Cloud, LogIn, UserCheck, Cpu, Feather
+  Folder, FolderOpen, Network, Cloud, LogIn, UserCheck, Cpu, Feather,
+  Sun, Moon, BarChart3, CheckCircle2
 } from 'lucide-react';
 
 import CharacterManager from './components/CharacterManager';
@@ -39,6 +40,9 @@ export default function App() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('fictify-dark-mode') !== 'false');
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   // Cloud State
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -115,6 +119,13 @@ export default function App() {
         }
       }
     }
+  }, []);
+
+  // Apply dark mode on mount
+  useEffect(() => {
+    const isDark = localStorage.getItem('fictify-dark-mode') !== 'false';
+    document.documentElement.classList.toggle('dark', isDark);
+    document.documentElement.classList.toggle('light', !isDark);
   }, []);
 
   // Update editor when active chapter changes
@@ -489,8 +500,10 @@ export default function App() {
   };
 
   const wordCount = editor ? editor.getText().trim().split(/\s+/).filter(w => w.length > 0).length : 0;
+  const charCount = editor ? editor.getText().replace(/\s/g, '').length : 0;
   const progressPercent = Math.min((wordCount / wordGoal) * 100, 100);
   const chapterCount = nodes.filter(n => n.type === 'chapter').length;
+  const characters = (() => { try { return JSON.parse(localStorage.getItem('fictify-characters') || '[]'); } catch { return []; } })();
 
   const renderContent = () => {
     if (activeTab === 'world') {
@@ -897,14 +910,40 @@ export default function App() {
                 <Download className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Ekspor (.txt)</span>
               </button>
+              <button
+                onClick={() => setIsStatsOpen(true)}
+                className="flex items-center justify-center p-1.5 text-gray-400 hover:text-purple-400 hover:bg-gray-800 rounded-lg transition-colors"
+                title="Statistik Cerita"
+              >
+                <BarChart3 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => {
+                  const newDark = !isDarkMode;
+                  setIsDarkMode(newDark);
+                  localStorage.setItem('fictify-dark-mode', String(newDark));
+                  document.documentElement.classList.toggle('dark', newDark);
+                  document.documentElement.classList.toggle('light', !newDark);
+                }}
+                className="flex items-center justify-center p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-gray-800 rounded-lg transition-colors"
+                title={isDarkMode ? 'Mode Terang' : 'Mode Gelap'}
+              >
+                {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
               {activeTab === 'chapter' && (
                 <button 
-                  onClick={saveStory}
-                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-2 lg:px-4 py-1.5 rounded-md text-xs font-bold shadow-lg shadow-purple-900/20 transition-all cursor-pointer"
+                  onClick={() => { saveStory(); setLastSaved(new Date()); }}
+                  className="flex items-center gap-1 bg-purple-600 hover:bg-purple-500 text-white px-2 lg:px-4 py-1.5 rounded-md text-xs font-bold shadow-lg shadow-purple-900/20 transition-all cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Simpan</span>
                 </button>
+              )}
+              {lastSaved && (
+                <span className="hidden sm:flex items-center gap-1 text-[10px] text-gray-500">
+                  <CheckCircle2 className="w-3 h-3 text-green-500" />
+                  {Math.floor((Date.now() - lastSaved.getTime()) / 60000)}m lalu
+                </span>
               )}
             </div>
           </div>
@@ -1007,6 +1046,50 @@ export default function App() {
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-gray-900 text-emerald-400 border border-emerald-500/20 px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-2.5 animate-in slide-in-from-bottom-5 fade-in duration-300 z-[70] backdrop-blur-md">
           <UserCheck className="w-4 h-4" />
           <span className="text-xs font-bold">{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Stats Modal */}
+      {isStatsOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setIsStatsOpen(false)}>
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-sm font-bold text-gray-200 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-purple-400" />
+                Statistik Cerita
+              </h3>
+              <button onClick={() => setIsStatsOpen(false)} className="text-gray-500 hover:text-gray-300 text-lg">×</button>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-800/50 rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold text-purple-400">{wordCount.toLocaleString()}</div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">Total Kata</div>
+                </div>
+                <div className="bg-gray-800/50 rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold text-emerald-400">{charCount.toLocaleString()}</div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">Total Karakter</div>
+                </div>
+                <div className="bg-gray-800/50 rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold text-yellow-400">{nodes.filter(n => n.type === 'chapter').length}</div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">Jumlah Bab</div>
+                </div>
+                <div className="bg-gray-800/50 rounded-xl p-3 text-center">
+                  <div className="text-2xl font-bold text-blue-400">{Object.keys(characters).length}</div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">Karakter Cerita</div>
+                </div>
+              </div>
+              <div className="bg-gray-800/50 rounded-xl p-3">
+                <div className="flex justify-between text-xs text-gray-400 mb-2">
+                  <span>Target Harian</span>
+                  <span>{wordCount} / {wordGoal} kata ({progressPercent.toFixed(0)}%)</span>
+                </div>
+                <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-purple-500 to-yellow-500 rounded-full transition-all" style={{ width: `${Math.min(progressPercent, 100)}%` }} />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
