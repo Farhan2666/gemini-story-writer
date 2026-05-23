@@ -17,8 +17,8 @@ export default function Outliner({ onChaptersGenerated }: OutlinerProps) {
 
     try {
       // Build Context
-      const savedChars = localStorage.getItem('gemini-characters');
-      const savedWorld = localStorage.getItem('gemini-worldview');
+      const savedChars = localStorage.getItem('fictify-characters');
+      const savedWorld = localStorage.getItem('fictify-worldview');
       let contextStr = 'Konteks Dunia dan Karakter:\n';
       
       if (savedWorld) {
@@ -91,7 +91,7 @@ OUTPUT HARUS BERUPA JSON ARRAY murni tanpa markdown backticks (tanpa \`\`\`json)
               AI Story Outliner
             </h2>
             <p className="text-gray-400 mb-8 leading-relaxed">
-              Tuliskan 1 kalimat ide mentah Anda. Gemini akan merakitnya menjadi kerangka bab yang utuh dan otomatis membuatkan kerangkanya di daftar bab Anda!
+              Tuliskan 1 kalimat ide mentah Anda. Fictify akan merakitnya menjadi kerangka bab yang utuh dan otomatis membuatkan kerangkanya di daftar bab Anda!
             </p>
 
             <div className="space-y-6">
@@ -114,7 +114,7 @@ OUTPUT HARUS BERUPA JSON ARRAY murni tanpa markdown backticks (tanpa \`\`\`json)
                 {isLoading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Gemini Sedang Merakit Cerita Anda...</span>
+                    <span>Fictify Sedang Merakit Cerita...</span>
                   </>
                 ) : (
                   <>
