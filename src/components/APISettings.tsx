@@ -65,9 +65,9 @@ export default function APISettings({ isOpen, onClose, onSaveNotify }: APISettin
   // Load existing configuration on open
   useEffect(() => {
     if (isOpen) {
-      const savedProvider = (localStorage.getItem('gemini-api-provider') as AIProvider) || 'gemini';
-      const savedKey = localStorage.getItem('gemini-api-key') || '';
-      const savedModel = localStorage.getItem('gemini-api-model') || '';
+      const savedProvider = (localStorage.getItem('fictify-api-provider') as AIProvider) || 'gemini';
+      const savedKey = localStorage.getItem('fictify-api-key') || '';
+      const savedModel = localStorage.getItem('fictify-api-model') || '';
 
       setProvider(savedProvider);
       setApiKey(savedKey);
@@ -136,9 +136,9 @@ export default function APISettings({ isOpen, onClose, onSaveNotify }: APISettin
       return;
     }
 
-    localStorage.setItem('gemini-api-provider', provider);
-    localStorage.setItem('gemini-api-key', apiKey.trim());
-    localStorage.setItem('gemini-api-model', modelToSave);
+    localStorage.setItem('fictify-api-provider', provider);
+    localStorage.setItem('fictify-api-key', apiKey.trim());
+    localStorage.setItem('fictify-api-model', modelToSave);
 
     setSaveSuccess(true);
     onSaveNotify();
@@ -151,9 +151,9 @@ export default function APISettings({ isOpen, onClose, onSaveNotify }: APISettin
 
   const handleReset = () => {
     if (confirm('Apakah Anda yakin ingin menghapus konfigurasi API kustom Anda dan kembali ke kunci .env.local default?')) {
-      localStorage.removeItem('gemini-api-provider');
-      localStorage.removeItem('gemini-api-key');
-      localStorage.removeItem('gemini-api-model');
+      localStorage.removeItem('fictify-api-provider');
+      localStorage.removeItem('fictify-api-key');
+      localStorage.removeItem('fictify-api-model');
       onSaveNotify();
       onClose();
     }
