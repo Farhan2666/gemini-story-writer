@@ -9,7 +9,7 @@ export default function CoverGenerator() {
 
   // Muat sampul yang tersimpan saat komponen dimuat
   useEffect(() => {
-    const savedCover = localStorage.getItem('gemini-book-cover');
+    const savedCover = localStorage.getItem('fictify-book-cover');
     if (savedCover) {
       setImageUrl(savedCover);
     }
@@ -26,7 +26,7 @@ export default function CoverGenerator() {
     const img = new Image();
     img.onload = () => {
       setImageUrl(url);
-      localStorage.setItem('gemini-book-cover', url);
+      localStorage.setItem('fictify-book-cover', url);
       setIsLoading(false);
     };
     img.onerror = () => {
@@ -56,7 +56,7 @@ export default function CoverGenerator() {
     reader.onloadend = () => {
       const base64String = reader.result as string;
       setImageUrl(base64String);
-      localStorage.setItem('gemini-book-cover', base64String);
+      localStorage.setItem('fictify-book-cover', base64String);
     };
     reader.readAsDataURL(file);
   };
@@ -64,7 +64,7 @@ export default function CoverGenerator() {
   const deleteCover = () => {
     if (confirm('Apakah Anda yakin ingin menghapus sampul buku ini?')) {
       setImageUrl(null);
-      localStorage.removeItem('gemini-book-cover');
+      localStorage.removeItem('fictify-book-cover');
     }
   };
 
