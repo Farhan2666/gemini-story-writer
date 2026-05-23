@@ -37,21 +37,21 @@ export default function CharacterMindMap() {
 
   // Load Characters & Relationships
   useEffect(() => {
-    const savedChars = localStorage.getItem('gemini-characters');
+    const savedChars = localStorage.getItem('fictify-characters');
     if (savedChars) {
       try {
         setCharacters(JSON.parse(savedChars));
       } catch (e) {}
     }
 
-    const savedRels = localStorage.getItem('gemini-relationships');
+    const savedRels = localStorage.getItem('fictify-relationships');
     if (savedRels) {
       try {
         setRelationships(JSON.parse(savedRels));
       } catch (e) {}
     }
 
-    const savedPos = localStorage.getItem('gemini-mindmap-positions');
+    const savedPos = localStorage.getItem('fictify-mindmap-positions');
     if (savedPos) {
       try {
         setPositions(JSON.parse(savedPos));
@@ -80,13 +80,13 @@ export default function CharacterMindMap() {
 
     if (updated) {
       setPositions(newPositions);
-      localStorage.setItem('gemini-mindmap-positions', JSON.stringify(newPositions));
+      localStorage.setItem('fictify-mindmap-positions', JSON.stringify(newPositions));
     }
   }, [characters, positions]);
 
   const saveRelationships = (newRels: Relationship[]) => {
     setRelationships(newRels);
-    localStorage.setItem('gemini-relationships', JSON.stringify(newRels));
+    localStorage.setItem('fictify-relationships', JSON.stringify(newRels));
   };
 
   const handleAddRelationship = () => {
@@ -165,7 +165,7 @@ export default function CharacterMindMap() {
   const handleMouseUp = () => {
     if (draggedId) {
       setDraggedId(null);
-      localStorage.setItem('gemini-mindmap-positions', JSON.stringify(positions));
+      localStorage.setItem('fictify-mindmap-positions', JSON.stringify(positions));
     }
   };
 
@@ -180,7 +180,7 @@ export default function CharacterMindMap() {
         };
       });
       setPositions(newPositions);
-      localStorage.setItem('gemini-mindmap-positions', JSON.stringify(newPositions));
+      localStorage.setItem('fictify-mindmap-positions', JSON.stringify(newPositions));
     }
   };
 
