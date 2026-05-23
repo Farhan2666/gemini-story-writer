@@ -38,8 +38,8 @@ export default function AIPanel({
     setIsGenerating(true);
     try {
       // 1. Ambil Konteks dari LocalStorage
-      const savedChars = localStorage.getItem('gemini-characters');
-      const savedWorld = localStorage.getItem('gemini-worldview');
+      const savedChars = localStorage.getItem('fictify-characters');
+      const savedWorld = localStorage.getItem('fictify-worldview');
       
       let contextStr = '--- KONTEKS CERITA ---\n';
       
