@@ -50,7 +50,7 @@ FICTIFY is a modern web application for writers — from short stories to full n
 
 ```bash
 git clone https://github.com/Farhan2666/gemini-story-writer.git
-cd gemini-story-writer
+cd fictify
 npm install
 npm run dev
 ```
