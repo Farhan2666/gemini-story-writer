@@ -75,7 +75,7 @@ export default function App() {
 
   // Load from localStorage on mount & perform auto-migration
   useEffect(() => {
-    const savedNodes = localStorage.getItem('gemini-nodes');
+    const savedNodes = localStorage.getItem('fictify-nodes');
     if (savedNodes) {
       try {
         const parsed = JSON.parse(savedNodes);
@@ -88,8 +88,8 @@ export default function App() {
         }
       } catch (e) {}
     } else {
-      // Auto-migrate from older flat 'gemini-chapters' format if exists
-      const savedChapters = localStorage.getItem('gemini-chapters');
+      // Auto-migrate from older flat 'fictify-chapters' format if exists
+      const savedChapters = localStorage.getItem('fictify-chapters');
       if (savedChapters) {
         try {
           const parsedChapters = JSON.parse(savedChapters);
@@ -103,7 +103,7 @@ export default function App() {
             }));
             setNodes(migrated);
             setActiveChapterId(migrated[0].id);
-            localStorage.setItem('gemini-nodes', JSON.stringify(migrated));
+            localStorage.setItem('fictify-nodes', JSON.stringify(migrated));
           }
         } catch (e) {}
       } else {
@@ -111,7 +111,7 @@ export default function App() {
         if (oldContent) {
           const migrated = [{ id: 'ch-1', title: 'Bab 1', type: 'chapter' as const, parentId: null, content: oldContent }];
           setNodes(migrated);
-          localStorage.setItem('gemini-nodes', JSON.stringify(migrated));
+          localStorage.setItem('fictify-nodes', JSON.stringify(migrated));
         }
       }
     }
@@ -135,7 +135,7 @@ export default function App() {
         n.id === activeChapterId ? { ...n, content: newContent } : n
       );
       setNodes(updatedNodes);
-      localStorage.setItem('gemini-nodes', JSON.stringify(updatedNodes));
+      localStorage.setItem('fictify-nodes', JSON.stringify(updatedNodes));
       showToast('Bab berhasil disimpan!');
       
       // Trigger cloud sync if logged in
@@ -160,9 +160,9 @@ export default function App() {
 
     const projectData = {
       nodes: currentNodes,
-      characters: JSON.parse(localStorage.getItem('gemini-characters') || '[]'),
-      world: JSON.parse(localStorage.getItem('gemini-worldview') || '{}'),
-      notes: localStorage.getItem('gemini-notes') || ''
+      characters: JSON.parse(localStorage.getItem('fictify-characters') || '[]'),
+      world: JSON.parse(localStorage.getItem('fictify-worldview') || '{}'),
+      notes: localStorage.getItem('fictify-notes') || ''
     };
 
     setTimeout(() => {
@@ -210,7 +210,7 @@ export default function App() {
       setNodes(finalNodes);
       setActiveChapterId(newId);
       setActiveTab('chapter');
-      localStorage.setItem('gemini-nodes', JSON.stringify(finalNodes));
+      localStorage.setItem('fictify-nodes', JSON.stringify(finalNodes));
       showToast('Bab baru dibuat!');
     }
   };
@@ -228,7 +228,7 @@ export default function App() {
     const finalNodes = [...nodes, newFolder];
     
     setNodes(finalNodes);
-    localStorage.setItem('gemini-nodes', JSON.stringify(finalNodes));
+    localStorage.setItem('fictify-nodes', JSON.stringify(finalNodes));
     showToast('Folder baru berhasil dibuat!');
   };
 
@@ -238,7 +238,7 @@ export default function App() {
     if (newTitle && newTitle.trim() !== "") {
       const updated = nodes.map(n => n.id === id ? { ...n, title: newTitle.trim() } : n);
       setNodes(updated);
-      localStorage.setItem('gemini-nodes', JSON.stringify(updated));
+      localStorage.setItem('fictify-nodes', JSON.stringify(updated));
       showToast('Nama berhasil diubah!');
     }
   };
@@ -276,7 +276,7 @@ export default function App() {
         return;
       }
       setNodes(updated);
-      localStorage.setItem('gemini-nodes', JSON.stringify(updated));
+      localStorage.setItem('fictify-nodes', JSON.stringify(updated));
       
       if (idsToDelete.includes(activeChapterId)) {
         const remainingChapters = updated.filter(n => n.type === 'chapter');
@@ -290,7 +290,7 @@ export default function App() {
     e.stopPropagation();
     const updated = nodes.map(n => n.id === id ? { ...n, isExpanded: !n.isExpanded } : n);
     setNodes(updated);
-    localStorage.setItem('gemini-nodes', JSON.stringify(updated));
+    localStorage.setItem('fictify-nodes', JSON.stringify(updated));
   };
 
   const moveNode = (id: string, targetParentId: string | null | 'root', e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -300,7 +300,7 @@ export default function App() {
 
     const updated = nodes.map(n => n.id === id ? { ...n, parentId: pId } : n);
     setNodes(updated);
-    localStorage.setItem('gemini-nodes', JSON.stringify(updated));
+    localStorage.setItem('fictify-nodes', JSON.stringify(updated));
     showToast("Posisi bab dipindahkan!");
   };
 
@@ -349,7 +349,7 @@ export default function App() {
     );
 
     setNodes(updatedNodes);
-    localStorage.setItem('gemini-nodes', JSON.stringify(updatedNodes));
+    localStorage.setItem('fictify-nodes', JSON.stringify(updatedNodes));
 
     exportText += compileContentRecursively(updatedNodes, null, 0);
     
@@ -371,9 +371,9 @@ export default function App() {
     const projectData = {
       version: "2.0",
       nodes: updatedNodes,
-      characters: JSON.parse(localStorage.getItem('gemini-characters') || '[]'),
-      world: JSON.parse(localStorage.getItem('gemini-worldview') || '{}'),
-      notes: localStorage.getItem('gemini-notes') || ''
+      characters: JSON.parse(localStorage.getItem('fictify-characters') || '[]'),
+      world: JSON.parse(localStorage.getItem('fictify-worldview') || '{}'),
+      notes: localStorage.getItem('fictify-notes') || ''
     };
 
     const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
@@ -397,7 +397,7 @@ export default function App() {
         
         if (data.nodes) {
           setNodes(data.nodes);
-          localStorage.setItem('gemini-nodes', JSON.stringify(data.nodes));
+          localStorage.setItem('fictify-nodes', JSON.stringify(data.nodes));
           const firstCh = data.nodes.find((n: any) => n.type === 'chapter');
           if (firstCh) {
             setActiveChapterId(firstCh.id);
@@ -413,14 +413,14 @@ export default function App() {
             content: ch.content
           }));
           setNodes(migrated);
-          localStorage.setItem('gemini-nodes', JSON.stringify(migrated));
+          localStorage.setItem('fictify-nodes', JSON.stringify(migrated));
           setActiveChapterId(migrated[0].id);
           if (editor) editor.commands.setContent(migrated[0].content || '');
         }
 
-        if (data.characters) localStorage.setItem('gemini-characters', JSON.stringify(data.characters));
-        if (data.world) localStorage.setItem('gemini-worldview', JSON.stringify(data.world));
-        if (data.notes !== undefined) localStorage.setItem('gemini-notes', data.notes);
+        if (data.characters) localStorage.setItem('fictify-characters', JSON.stringify(data.characters));
+        if (data.world) localStorage.setItem('fictify-worldview', JSON.stringify(data.world));
+        if (data.notes !== undefined) localStorage.setItem('fictify-notes', data.notes);
 
         showToast("Proyek berhasil dipulihkan!");
         setTimeout(() => window.location.reload(), 1000);
@@ -435,18 +435,18 @@ export default function App() {
   const handleRestoreFromCloud = (cloudData: any) => {
     if (cloudData.nodes) {
       setNodes(cloudData.nodes);
-      localStorage.setItem('gemini-nodes', JSON.stringify(cloudData.nodes));
+      localStorage.setItem('fictify-nodes', JSON.stringify(cloudData.nodes));
       const firstCh = cloudData.nodes.find((n: any) => n.type === 'chapter');
       if (firstCh) {
         setActiveChapterId(firstCh.id);
         if (editor) editor.commands.setContent(firstCh.content || '');
       }
     }
-    if (cloudData.characters) localStorage.setItem('gemini-characters', JSON.stringify(cloudData.characters));
-    if (cloudData.world) localStorage.setItem('gemini-worldview', JSON.stringify(cloudData.world));
-    if (cloudData.notes !== undefined) localStorage.setItem('gemini-notes', cloudData.notes);
+    if (cloudData.characters) localStorage.setItem('fictify-characters', JSON.stringify(cloudData.characters));
+    if (cloudData.world) localStorage.setItem('fictify-worldview', JSON.stringify(cloudData.world));
+    if (cloudData.notes !== undefined) localStorage.setItem('fictify-notes', cloudData.notes);
 
-    showToast("Restorasi data dari GeminiCloud Berhasil!");
+    showToast("Restorasi data dari Fictify Berhasil!");
     setTimeout(() => window.location.reload(), 800);
   };
 
@@ -465,7 +465,7 @@ export default function App() {
       );
       const finalNodes = [...updatedNodes, ...generated];
       setNodes(finalNodes);
-      localStorage.setItem('gemini-nodes', JSON.stringify(finalNodes));
+      localStorage.setItem('fictify-nodes', JSON.stringify(finalNodes));
       setActiveChapterId(generated[0].id);
       setActiveTab('chapter');
     }
@@ -536,7 +536,7 @@ export default function App() {
                <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-10">
                  <div className="flex items-center gap-3 bg-gray-800 px-6 py-4 rounded-xl shadow-2xl border border-purple-500/30">
                    <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
-                   <span className="text-purple-100 font-medium">Gemini sedang merangkai cerita...</span>
+                   <span className="text-purple-100 font-medium">Fictify sedang merangkai cerita...</span>
                  </div>
                </div>
             )}
@@ -792,7 +792,7 @@ export default function App() {
                     {user ? user.penName : 'Offline Workspace'}
                   </h4>
                   <p className="text-[9px] text-gray-500 mt-0.5 truncate font-medium">
-                    {user ? 'GeminiCloud Sync Aktif' : 'Masuk Akun Pujangga'}
+                    {user ? 'Fictify Sync Aktif' : 'Masuk Akun'}
                   </p>
                 </div>
               </div>
@@ -835,7 +835,7 @@ export default function App() {
                  activeTab === 'outliner' ? 'Pembuat Kerangka Cerita AI' :
                  activeTab === 'cover' ? 'Pembuat Sampul Buku AI' :
                  activeTab === 'mindmap' ? 'Peta Hubungan Tokoh' :
-                 activeTab === 'cloud' ? 'Manajemen Sinkronisasi GeminiCloud' :
+                 activeTab === 'cloud' ? 'Manajemen Sinkronisasi Fictify' :
                  `Sedang Menulis: ${activeChapterTitle}`}
               </h2>
             </div>
