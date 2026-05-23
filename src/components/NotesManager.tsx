@@ -5,7 +5,7 @@ export default function NotesManager() {
   const [note, setNote] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('gemini-notes');
+    const saved = localStorage.getItem('fictify-notes');
     if (saved) {
       setNote(saved);
     }
@@ -13,7 +13,7 @@ export default function NotesManager() {
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setNote(e.target.value);
-    localStorage.setItem('gemini-notes', e.target.value);
+    localStorage.setItem('fictify-notes', e.target.value);
   };
 
   return (
