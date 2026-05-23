@@ -1,5 +1,69 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Light theme overrides */
+.light body,
+.light #root {
+  background-color: #f8f6f3 !important;
+  color: #1a1a2e !important;
+}
+
+.light .bg-gray-950,
+.light .bg-gray-950\/95,
+.light .bg-gray-950\/80 {
+  background-color: #ffffff !important;
+}
+
+.light .bg-gray-900,
+.light .bg-gray-900\/80,
+.light .bg-gray-900\/50 {
+  background-color: #ffffff !important;
+}
+
+.light .bg-gray-900\/30 {
+  background-color: #f0edf5 !important;
+}
+
+.light .border-gray-850,
+.light .border-gray-800 {
+  border-color: #e2ddf0 !important;
+}
+
+.light .text-gray-200,
+.light .text-gray-300,
+.light .text-gray-400 {
+  color: #374151 !important;
+}
+
+.light .text-gray-500 {
+  color: #6b7280 !important;
+}
+
+.light .hover\:bg-gray-800:hover {
+  background-color: #f0edf5 !important;
+}
+
+.light .hover\:bg-gray-850:hover {
+  background-color: #f0edf5 !important;
+}
+
+.light .bg-gray-800\/50 {
+  background-color: #f0edf5 !important;
+}
+
+.light .bg-gray-700 {
+  background-color: #e2ddf0 !important;
+}
+
+.light .hover\:bg-gray-900\/30:hover {
+  background-color: #f0edf5 !important;
+}
+
+.light .border-indigo-500\/10 {
+  border-color: #d1c4e9 !important;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
