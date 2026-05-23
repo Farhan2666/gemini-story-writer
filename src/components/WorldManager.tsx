@@ -10,7 +10,7 @@ export default function WorldManager() {
   const [savedMessage, setSavedMessage] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('gemini-worldview');
+    const saved = localStorage.getItem('fictify-worldview');
     if (saved) {
       try {
         setWorldData(JSON.parse(saved));
@@ -19,7 +19,7 @@ export default function WorldManager() {
   }, []);
 
   const handleSave = () => {
-    localStorage.setItem('gemini-worldview', JSON.stringify(worldData));
+    localStorage.setItem('fictify-worldview', JSON.stringify(worldData));
     setSavedMessage(true);
     setTimeout(() => setSavedMessage(false), 3000);
   };
