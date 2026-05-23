@@ -55,7 +55,7 @@ export default function CloudManager({
 
   // Load user from localStorage on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('gemini-cloud-user');
+    const savedUser = localStorage.getItem('fictify-cloud-user');
     if (savedUser) {
       try {
         setUser(JSON.parse(savedUser));
@@ -98,7 +98,7 @@ export default function CloudManager({
           joinedDate: new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
         };
         localStorage.setItem(`gemini-cloud-user-${email}`, JSON.stringify({ ...newUser, password }));
-        localStorage.setItem('gemini-cloud-user', JSON.stringify(newUser));
+        localStorage.setItem('fictify-cloud-user', JSON.stringify(newUser));
         setUser(newUser);
         // Create initial revision
         const initialRevision: CloudRevision = {
@@ -108,10 +108,10 @@ export default function CloudManager({
           chapterCount,
           note: 'Inisialisasi Cloud Workspace',
           data: JSON.stringify({
-            nodes: JSON.parse(localStorage.getItem('gemini-nodes') || '[]'),
-            characters: JSON.parse(localStorage.getItem('gemini-characters') || '[]'),
-            world: JSON.parse(localStorage.getItem('gemini-worldview') || '{}'),
-            notes: localStorage.getItem('gemini-notes') || ''
+            nodes: JSON.parse(localStorage.getItem('fictify-nodes') || '[]'),
+            characters: JSON.parse(localStorage.getItem('fictify-characters') || '[]'),
+            world: JSON.parse(localStorage.getItem('fictify-worldview') || '{}'),
+            notes: localStorage.getItem('fictify-notes') || ''
           })
         };
         localStorage.setItem(`gemini-cloud-revisions-${email}`, JSON.stringify([initialRevision]));
@@ -135,7 +135,7 @@ export default function CloudManager({
             avatar: cred.avatar,
             joinedDate: cred.joinedDate
           };
-          localStorage.setItem('gemini-cloud-user', JSON.stringify(loggedInUser));
+          localStorage.setItem('fictify-cloud-user', JSON.stringify(loggedInUser));
           setUser(loggedInUser);
         } catch (e) {
           setAuthError('Gagal melakukan login.');
@@ -145,7 +145,7 @@ export default function CloudManager({
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('gemini-cloud-user');
+    localStorage.removeItem('fictify-cloud-user');
     setUser(null);
   };
 
@@ -169,7 +169,7 @@ export default function CloudManager({
           <div>
             <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400 flex items-center gap-3">
               <Cloud className="w-8 h-8 text-purple-400" />
-              GeminiCloud Sync
+              Fictify Sync
             </h2>
             <p className="text-gray-400 mt-1">Gunakan sinkronisasi awan otomatis untuk menjaga karya Anda tetap aman di mana saja.</p>
           </div>
@@ -210,7 +210,7 @@ export default function CloudManager({
               <div className="w-16 h-16 bg-purple-950/50 border border-purple-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-900/20">
                 {isRegistering ? <UserPlus className="w-8 h-8 text-purple-400" /> : <LogIn className="w-8 h-8 text-purple-400" />}
               </div>
-              <h3 className="text-2xl font-bold text-gray-100">{isRegistering ? 'Daftar Akun Pujangga' : 'Masuk ke GeminiCloud'}</h3>
+              <h3 className="text-2xl font-bold text-gray-100">{isRegistering ? 'Daftar Akun' : 'Masuk ke Fictify'}</h3>
               <p className="text-sm text-gray-400 mt-2">Dapatkan backup gratis 100MB di awan untuk seluruh novel Anda.</p>
             </div>
 
@@ -254,7 +254,7 @@ export default function CloudManager({
                   type="email" 
                   value={email} 
                   onChange={e => setEmail(e.target.value)} 
-                  placeholder="pujangga@gemini.com"
+                  placeholder="user@fictify.app"
                   className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-gray-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-sm"
                   required
                 />
@@ -349,7 +349,7 @@ export default function CloudManager({
               <div className="bg-gray-900/40 border border-gray-800 rounded-2xl p-5 shadow-lg">
                 <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                   <Database className="w-3.5 h-3.5 text-purple-400" />
-                  Kapasitas GeminiCloud
+                  Kapasitas Fictify
                 </h5>
                 <div className="h-2 bg-gray-950 rounded-full overflow-hidden border border-gray-800">
                   <div className="h-full bg-gradient-to-r from-purple-500 to-indigo-500" style={{ width: '1.4%' }}></div>
