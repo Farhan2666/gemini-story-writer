@@ -38,8 +38,8 @@ export default function AIChatPanel() {
 
     try {
       // Build Context
-      const savedChars = localStorage.getItem('gemini-characters');
-      const savedWorld = localStorage.getItem('gemini-worldview');
+      const savedChars = localStorage.getItem('fictify-characters');
+      const savedWorld = localStorage.getItem('fictify-worldview');
       let contextStr = 'Konteks Cerita (Jawablah pertanyaan user berdasarkan aturan ini):\n';
       
       if (savedWorld) {
