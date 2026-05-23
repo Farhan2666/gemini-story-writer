@@ -1,73 +1,77 @@
-# React + TypeScript + Vite
+# FICTIFY
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> **AI-powered novel & story writing application**
 
-Currently, two official plugins are available:
+FICTIFY is a modern web application for writers — from short stories to full novels. Built with React, TypeScript, and powered by AI assistance to help you outline, write, and polish your stories.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Smart Editor
+- Rich text editor powered by TipTap
+- Chapter-based outlining system
+- Auto-save your progress
 
-## Expanding the ESLint configuration
+### AI Writing Assistant
+- Chat with AI to brainstorm ideas
+- AI-powered story suggestions
+- Multiple AI provider support (Gemini, OpenAI, DeepSeek, Groq, OpenRouter)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Character Manager
+- Create and manage characters
+- Track character traits, backstories, and relationships
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### World Builder
+- Build the universe of your story
+- Manage locations, lore, and world rules
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Cover Generator
+- Generate book covers using AI
+- Customize styles and themes
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Cloud Sync
+- Login to sync your projects across devices
+- Automatic cloud backups
+
+### Notes & Outliner
+- Keep notes alongside your writing
+- Drag-and-drop chapter organization
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+
+### Installation
+
+```bash
+git clone https://github.com/Farhan2666/gemini-story-writer.git
+cd gemini-story-writer
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Tech Stack
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+React 19, TypeScript, Vite, Tailwind CSS 4, TipTap, Lucide React
+
+---
+
+## Build
+
+```bash
+npm run build
+npm run preview
 ```
+
+---
+
+## License
+
+MIT
