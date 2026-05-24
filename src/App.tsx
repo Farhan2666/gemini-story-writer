@@ -703,8 +703,34 @@ export default function App() {
   return (
     <div className="flex h-screen bg-[#0d1117] text-gray-200 font-sans overflow-hidden">
       
-      {/* Ambient Background */}
-      <div className="ambient-bg" />
+      {/* Ambient Background with gradient + starfield */}
+      <div className="relative" style={{ position: 'fixed', inset: 0, zIndex: -1 }}>
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(-45deg, #0f0c29, #1a1a3e, #16213e, #0f3460)',
+          backgroundSize: '400% 400%',
+          animation: 'gradBg 15s ease infinite',
+        }} />
+        <div className="light-star-field" style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: `
+            radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.7) 50%, transparent 50%),
+            radial-gradient(1px 1px at 40% 70%, rgba(255,255,255,0.5) 50%, transparent 50%),
+            radial-gradient(1.5px 1.5px at 60% 20%, rgba(255,255,255,0.8) 50%, transparent 50%),
+            radial-gradient(1px 1px at 80% 50%, rgba(255,255,255,0.6) 50%, transparent 50%),
+            radial-gradient(1px 1px at 10% 80%, rgba(255,255,255,0.4) 50%, transparent 50%),
+            radial-gradient(1.5px 1.5px at 90% 10%, rgba(255,255,255,0.7) 50%, transparent 50%),
+            radial-gradient(1px 1px at 30% 40%, rgba(255,255,255,0.5) 50%, transparent 50%),
+            radial-gradient(1px 1px at 70% 90%, rgba(255,255,255,0.6) 50%, transparent 50%),
+            radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.4) 50%, transparent 50%),
+            radial-gradient(2px 2px at 35% 60%, rgba(255,255,255,0.9) 50%, transparent 50%)
+          `,
+        }} />
+        <style>{`
+          @keyframes gradBg { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+          .light-star-field { mix-blend-mode: screen; }
+        `}</style>
+      </div>
       
       {/* Daily Writing Quote - subtle overlay */}
       <div className="fixed bottom-24 right-4 z-10 max-w-[200px] hidden lg:block opacity-40 hover:opacity-70 transition-opacity duration-500">

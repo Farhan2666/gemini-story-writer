@@ -1,147 +1,5 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
-/* Ambient animated gradient background */
-.ambient-bg {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(-45deg, #0f0c29, #1a1a3e, #16213e, #0f3460);
-  background-size: 400% 400%;
-  animation: gradientShift 15s ease infinite;
-}
-.ambient-bg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: 
-    radial-gradient(1px 1px at 20% 30%, #fff 50%, transparent 50%),
-    radial-gradient(1px 1px at 40% 70%, #fff 50%, transparent 50%),
-    radial-gradient(1.5px 1.5px at 60% 20%, #fff 50%, transparent 50%),
-    radial-gradient(1px 1px at 80% 50%, #fff 50%, transparent 50%),
-    radial-gradient(1px 1px at 10% 80%, #fff 50%, transparent 50%),
-    radial-gradient(1.5px 1.5px at 90% 10%, #fff 50%, transparent 50%),
-    radial-gradient(1px 1px at 30% 40%, #fff 50%, transparent 50%),
-    radial-gradient(1px 1px at 70% 90%, #fff 50%, transparent 50%),
-    radial-gradient(1px 1px at 50% 10%, #fff 50%, transparent 50%),
-    radial-gradient(2px 2px at 35% 60%, #fff 50%, transparent 50%);
-}
-
-.light .ambient-bg {
-  background: linear-gradient(-45deg, #f5f0eb, #e8e0f0, #f0e6ff, #faf0e6);
-  background-size: 400% 400%;
-  animation: gradientShift 15s ease infinite;
-}
-.light .ambient-bg::after {
-  background: 
-    radial-gradient(1px 1px at 20% 30%, #7c3aed 50%, transparent 50%),
-    radial-gradient(1px 1px at 40% 70%, #7c3aed 50%, transparent 50%),
-    radial-gradient(1.5px 1.5px at 60% 20%, #7c3aed 50%, transparent 50%),
-    radial-gradient(1px 1px at 80% 50%, #7c3aed 50%, transparent 50%),
-    radial-gradient(1px 1px at 10% 80%, #7c3aed 50%, transparent 50%),
-    radial-gradient(1.5px 1.5px at 90% 10%, #7c3aed 50%, transparent 50%),
-    radial-gradient(1px 1px at 30% 40%, #7c3aed 50%, transparent 50%),
-    radial-gradient(1px 1px at 70% 90%, #7c3aed 50%, transparent 50%),
-    radial-gradient(1px 1px at 50% 10%, #7c3aed 50%, transparent 50%),
-    radial-gradient(2px 2px at 35% 60%, #7c3aed 50%, transparent 50%);
-}
-
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-/* Remove old stars component styles */
-.stars-container, .star { display: none; }
-
-/* Fade-in transitions for content */
-.fade-enter {
-  opacity: 0;
-  transform: translateY(8px);
-}
-.fade-enter-active {
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-/* Subtle paper texture overlay on editor */
-.editor-paper::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  opacity: 0.03;
-  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)'/%3E%3C/svg%3E");
-  pointer-events: none;
-}
-
-/* Daily quote styling */
-.daily-quote {
-  position: relative;
-  overflow: hidden;
-}
-.daily-quote::before {
-  content: '\201C';
-  position: absolute;
-  top: -10px;
-  left: -5px;
-  font-size: 4rem;
-  line-height: 1;
-  opacity: 0.15;
-  font-family: serif;
-}
-
-/* Smooth transitions for tab content */
-.tab-content {
-  animation: fadeSlideIn 0.25s ease-out;
-}
-
-@keyframes fadeSlideIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.light .border-gray-850,
-.light .border-gray-800 {
-  border-color: #e2ddf0 !important;
-}
-
-.light .text-gray-200,
-.light .text-gray-300,
-.light .text-gray-400 {
-  color: #374151 !important;
-}
-
-.light .text-gray-500 {
-  color: #6b7280 !important;
-}
-
-.light .hover\:bg-gray-800:hover {
-  background-color: #f0edf5 !important;
-}
-
-.light .hover\:bg-gray-850:hover {
-  background-color: #f0edf5 !important;
-}
-
-.light .bg-gray-800\/50 {
-  background-color: #f0edf5 !important;
-}
-
-.light .bg-gray-700 {
-  background-color: #e2ddf0 !important;
-}
-
-.light .hover\:bg-gray-900\/30:hover {
-  background-color: #f0edf5 !important;
-}
-
-.light .border-indigo-500\/10 {
-  border-color: #d1c4e9 !important;
-}
-
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -162,17 +20,9 @@ code {
     background-color: white !important;
     color: black !important;
   }
-
-  /* Sembunyikan elemen UI yang tidak perlu dicetak */
-  .w-64, /* Sidebar */
-  .h-14, /* Topbar */
-  .absolute, /* Zen mode button */
-  .fixed, /* Toasts */
-  button {
+  .w-64, .h-14, .absolute, .fixed, button {
     display: none !important;
   }
-
-  /* Buat editor memenuhi halaman putih */
   #root, .flex-1, .max-w-3xl {
     display: block !important;
     overflow: visible !important;
@@ -184,8 +34,6 @@ code {
     margin: 0 !important;
     padding: 0 !important;
   }
-
-  /* Styling khusus font buku fisik */
   .prose {
     color: black !important;
     font-family: 'Georgia', 'Times New Roman', serif !important;
@@ -193,8 +41,6 @@ code {
     line-height: 1.6 !important;
     padding: 2cm !important;
   }
-
-  /* Page break antar bab jika diprint masal nantinya */
   .chapter-container {
     page-break-after: always;
   }
