@@ -44,6 +44,7 @@ export default function App() {
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSerifFont, setIsSerifFont] = useState(() => localStorage.getItem('fictify-serif') === 'true');
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   // Cloud State
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -372,6 +373,48 @@ export default function App() {
     a.download = 'Novel_Fictify.txt';
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleExportHTML = () => {
+    const currentEditorContent = editor?.getHTML() || "";
+    const updatedNodes = nodes.map(n => 
+      n.id === activeChapterId ? { ...n, content: currentEditorContent } : n
+    );
+    setNodes(updatedNodes);
+    localStorage.setItem('fictify-nodes', JSON.stringify(updatedNodes));
+
+    let html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>FICTIFY - Novel</title>';
+    html += '<style>body{max-width:800px;margin:40px auto;padding:20px;font-family:Georgia,serif;line-height:1.8;color:#333}';
+    html += 'h1{text-align:center;border-bottom:2px solid #7c3aed;padding-bottom:10px}';
+    html += 'h2{color:#7c3aed;margin-top:30px}';
+    html += '.chapter{margin-bottom:40px}</style></head><body>';
+    html += '<h1>📖 Novel Saya</h1>';
+    
+    const buildHTML = (parentId: string | null, depth: number) => {
+      const children = updatedNodes.filter(n => n.parentId === parentId);
+      children.forEach(node => {
+        if (node.type === 'folder') {
+          html += `<h2>📁 ${node.title}</h2>`;
+          buildHTML(node.id, depth + 1);
+        } else {
+          html += `<div class="chapter"><h3>${node.title}</h3><div>${node.content || ''}</div></div>`;
+        }
+      });
+    };
+    buildHTML(null, 0);
+    html += '</body></html>';
+    
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Novel_Fictify.html';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportPDF = () => {
+    window.print();
   };
 
   const handleBackup = () => {
@@ -914,13 +957,32 @@ export default function App() {
                   <MessageSquare className="w-4 h-4" />
                 </button>
               )}
-              <button 
-                onClick={handleExport}
-                className="flex items-center gap-2 bg-gray-900 hover:bg-gray-850 text-gray-300 px-2 lg:px-3.5 py-1.5 rounded-md text-xs font-semibold transition-colors border border-gray-850"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Ekspor (.txt)</span>
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => setIsExportOpen(!isExportOpen)}
+                  className="flex items-center gap-2 bg-gray-900 hover:bg-gray-850 text-gray-300 px-2 lg:px-3.5 py-1.5 rounded-md text-xs font-semibold transition-colors border border-gray-850"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Ekspor</span>
+                </button>
+                {isExportOpen && (
+                  <div className="absolute top-full right-0 mt-1 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl z-50 min-w-[160px] py-1">
+                    <button onClick={() => { handleExport(); setIsExportOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-300 hover:bg-gray-800 transition-colors text-left">
+                      <FileText className="w-3.5 h-3.5 text-gray-500" /> .txt (Plain Text)
+                    </button>
+                    <button onClick={() => { handleExportHTML(); setIsExportOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-300 hover:bg-gray-800 transition-colors text-left">
+                      <Globe className="w-3.5 h-3.5 text-blue-400" /> .html (Web Page)
+                    </button>
+                    <button onClick={() => { handleExportPDF(); setIsExportOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-300 hover:bg-gray-800 transition-colors text-left">
+                      <FileText className="w-3.5 h-3.5 text-red-400" /> PDF (Cetak)
+                    </button>
+                    <div className="border-t border-gray-800 my-1" />
+                    <button onClick={() => { handleBackup(); setIsExportOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-300 hover:bg-gray-800 transition-colors text-left">
+                      <DatabaseBackup className="w-3.5 h-3.5 text-emerald-400" /> .fictify (Backup)
+                    </button>
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => setIsStatsOpen(true)}
                 className="flex items-center justify-center p-1.5 text-gray-400 hover:text-purple-400 hover:bg-gray-800 rounded-lg transition-colors"
