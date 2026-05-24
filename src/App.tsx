@@ -880,10 +880,10 @@ export default function App() {
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden pb-16 lg:pb-0">
+      <div className="flex-1 flex flex-col pb-16 lg:pb-0">
         {/* Topbar */}
         {!isZenMode && (
-          <div className="h-14 border-b border-gray-850 bg-gray-900/30 backdrop-blur flex items-center justify-between px-3 lg:px-6 shrink-0">
+          <div className="h-14 border-b border-gray-850 bg-gray-900/30 backdrop-blur flex items-center justify-between px-3 lg:px-6 shrink-0 relative z-30">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsSidebarOpen(true)}
