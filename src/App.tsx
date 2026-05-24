@@ -7,7 +7,7 @@ import {
   Trash2, MessageSquare, PenTool, DatabaseBackup, Upload, Wand2, 
   Maximize2, Minimize2, Volume2, Target, Image as ImageIcon,
   Folder, FolderOpen, Network, Cloud, LogIn, UserCheck, Cpu, Feather,
-  Sun, Moon, BarChart3, CheckCircle2
+  Sun, Moon, BarChart3, CheckCircle2, BookOpen
 } from 'lucide-react';
 
 import CharacterManager from './components/CharacterManager';
@@ -43,6 +43,7 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('fictify-dark-mode') !== 'false');
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isSerifFont, setIsSerifFont] = useState(() => localStorage.getItem('fictify-serif') === 'true');
 
   // Cloud State
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -72,7 +73,7 @@ export default function App() {
     content: '',
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[500px] p-4 text-gray-200 pb-[50vh]',
+        class: `prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[500px] p-4 pb-[50vh] transition-all duration-300 ${isSerifFont ? 'font-serif text-gray-100' : 'text-gray-200'}`,
       },
     },
   });
@@ -659,6 +660,16 @@ export default function App() {
   return (
     <div className="flex h-screen bg-[#0d1117] text-gray-200 font-sans overflow-hidden">
       
+      {/* Ambient Background */}
+      <div className="ambient-bg" />
+      
+      {/* Daily Writing Quote - subtle overlay */}
+      <div className="fixed bottom-24 right-4 z-10 max-w-[200px] hidden lg:block opacity-40 hover:opacity-70 transition-opacity duration-500">
+        <div className="daily-quote text-[10px] text-gray-400 italic leading-relaxed">
+          "Satu kata hari ini, satu halaman besok. Teruslah menulis."
+        </div>
+      </div>
+      
       {/* Sidebar */}
       {!isZenMode && (
         <>
@@ -930,6 +941,23 @@ export default function App() {
               >
                 {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
+              {activeTab === 'chapter' && (
+                <button
+                  onClick={() => {
+                    const newSerif = !isSerifFont;
+                    setIsSerifFont(newSerif);
+                    localStorage.setItem('fictify-serif', String(newSerif));
+                    if (editor) {
+                      editor.chain().focus().run();
+                      document.querySelector('.ProseMirror')?.classList.toggle('font-serif', newSerif);
+                    }
+                  }}
+                  className={`flex items-center justify-center p-1.5 rounded-lg transition-colors ${isSerifFont ? 'text-amber-400 bg-amber-900/20' : 'text-gray-400 hover:text-amber-400 hover:bg-gray-800'}`}
+                  title={isSerifFont ? 'Font Sans-serif' : 'Font Serif (Buku)'}
+                >
+                  <BookOpen className="w-4 h-4" />
+                </button>
+              )}
               {activeTab === 'chapter' && (
                 <button 
                   onClick={() => { saveStory(); setLastSaved(new Date()); }}
