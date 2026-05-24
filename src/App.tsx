@@ -706,25 +706,6 @@ export default function App() {
       {/* Ambient Background */}
       <div className="ambient-bg" />
       
-      {/* Floating Stars - generated once */}
-      <div className="stars-container">
-        {Array.from({ length: 60 }, (_, i) => (
-          <div
-            key={i}
-            className="star"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              width: `${1 + Math.random() * 3}px`,
-              height: `${1 + Math.random() * 3}px`,
-              animationDuration: `${8 + Math.random() * 12}s`,
-              animationDelay: `${Math.random() * 10}s`,
-              opacity: 0.3 + Math.random() * 0.5,
-            }}
-          />
-        ))}
-      </div>
-      
       {/* Daily Writing Quote - subtle overlay */}
       <div className="fixed bottom-24 right-4 z-10 max-w-[200px] hidden lg:block opacity-40 hover:opacity-70 transition-opacity duration-500">
         <div className="daily-quote text-[10px] text-gray-400 italic leading-relaxed">
