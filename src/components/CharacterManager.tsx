@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, User, Trash2 } from 'lucide-react';
+import { Plus, User, Trash2, Edit3, X, Check } from 'lucide-react';
 
 export interface Character {
   id: string;
@@ -12,6 +12,7 @@ export interface Character {
 export default function CharacterManager() {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [newChar, setNewChar] = useState({ name: '', role: '', background: '', imageUrl: '' });
 
   useEffect(() => {
@@ -39,7 +40,27 @@ export default function CharacterManager() {
     setIsAdding(false);
   };
 
+  const handleEdit = (char: Character) => {
+    setNewChar({ name: char.name, role: char.role, background: char.background, imageUrl: char.imageUrl || '' });
+    setEditingId(char.id);
+    setIsAdding(false);
+  };
+
+  const handleSaveEdit = () => {
+    if (!newChar.name || !editingId) return;
+    saveToLocal(characters.map(c => c.id === editingId ? { ...c, ...newChar } : c));
+    setNewChar({ name: '', role: '', background: '', imageUrl: '' });
+    setEditingId(null);
+  };
+
+  const handleCancel = () => {
+    setNewChar({ name: '', role: '', background: '', imageUrl: '' });
+    setIsAdding(false);
+    setEditingId(null);
+  };
+
   const handleDelete = (id: string) => {
+    if (!confirm('Hapus karakter ini?')) return;
     saveToLocal(characters.filter(c => c.id !== id));
   };
 
@@ -107,8 +128,67 @@ export default function CharacterManager() {
                 />
               </div>
               <div className="flex justify-end gap-3">
-                <button onClick={() => setIsAdding(false)} className="px-4 py-2 text-gray-400 hover:text-gray-200">Batal</button>
+                <button onClick={handleCancel} className="px-4 py-2 text-gray-400 hover:text-gray-200">Batal</button>
                 <button onClick={handleAdd} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-md">Simpan Karakter</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {editingId && (
+          <div className="bg-gray-800 border border-purple-500/50 rounded-xl p-6 mb-8 shadow-xl">
+            <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center gap-2">
+              <Edit3 className="w-4 h-4 text-purple-400" /> Edit Karakter
+            </h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Nama Karakter</label>
+                  <input 
+                    type="text" 
+                    value={newChar.name}
+                    onChange={e => setNewChar({...newChar, name: e.target.value})}
+                    className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-2 text-gray-100 focus:outline-none focus:border-purple-500"
+                    placeholder="Misal: Budi Si Penjinak Naga"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Peran (Role)</label>
+                  <input 
+                    type="text" 
+                    value={newChar.role}
+                    onChange={e => setNewChar({...newChar, role: e.target.value})}
+                    className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-2 text-gray-100 focus:outline-none focus:border-purple-500"
+                    placeholder="Misal: Protagonis Utama / Rival"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">URL Gambar (Opsional)</label>
+                <input 
+                  type="text" 
+                  value={newChar.imageUrl}
+                  onChange={e => setNewChar({...newChar, imageUrl: e.target.value})}
+                  className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-2 text-gray-100 focus:outline-none focus:border-purple-500 mb-4"
+                  placeholder="Paste link gambar karakter (https://...)"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Latar Belakang & Kepribadian (Untuk AI)</label>
+                <textarea 
+                  value={newChar.background}
+                  onChange={e => setNewChar({...newChar, background: e.target.value})}
+                  className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-2 text-gray-100 h-24 focus:outline-none focus:border-purple-500"
+                  placeholder="Ceritakan sifatnya, senjatanya, atau masa lalunya agar AI bisa menirunya..."
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button onClick={handleCancel} className="px-4 py-2 text-gray-400 hover:text-gray-200 flex items-center gap-1">
+                  <X className="w-4 h-4" /> Batal
+                </button>
+                <button onClick={handleSaveEdit} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-md flex items-center gap-1">
+                  <Check className="w-4 h-4" /> Simpan Perubahan
+                </button>
               </div>
             </div>
           </div>
@@ -116,10 +196,13 @@ export default function CharacterManager() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {characters.map(char => (
-            <div key={char.id} className="bg-gray-800/50 border border-gray-700 hover:border-purple-500/50 transition-colors rounded-xl p-5 relative group">
-              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => handleDelete(char.id)} className="text-red-400 hover:text-red-300 bg-red-400/10 p-1.5 rounded-md">
-                  <Trash2 className="w-4 h-4" />
+            <div key={char.id} className="bg-gray-800/50 border border-gray-700 hover:border-purple-500/50 transition-colors rounded-xl p-5 relative">
+              <div className="absolute top-3 right-3 flex items-center gap-1">
+                <button onClick={() => handleEdit(char)} className="text-blue-400 hover:text-blue-300 bg-blue-400/10 hover:bg-blue-400/20 p-1.5 rounded-md transition-colors" title="Edit karakter">
+                  <Edit3 className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => handleDelete(char.id)} className="text-red-400 hover:text-red-300 bg-red-400/10 hover:bg-red-400/20 p-1.5 rounded-md transition-colors" title="Hapus karakter">
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
               <div className="flex items-center gap-3 mb-3">
