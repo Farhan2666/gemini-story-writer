@@ -535,24 +535,29 @@ export default function App() {
   };
 
   const handlePlotGenerated = (premise: string, plotInduk: PlotBab[]) => {
+    const numberedPlotInduk = plotInduk.map((plot, i) => ({
+      title: `Bab ${i + 1}: ${plot.title}`,
+      summary: plot.summary,
+    }));
+
     const meta: NovelMeta = {
       premise,
-      targetBabCount: plotInduk.length,
-      plotInduk,
+      targetBabCount: numberedPlotInduk.length,
+      plotInduk: numberedPlotInduk,
       generatedBabCount: 1,
       chapterSummaries: {},
       isComplete: false,
     };
     saveNovelMeta(meta);
 
-    const firstPlot = plotInduk[0];
+    const firstPlot = numberedPlotInduk[0];
     const newId = `ch-gen-${Date.now()}-0`;
     const firstChapter: StoryNode = {
       id: newId,
       title: firstPlot.title,
       type: 'chapter',
       parentId: null,
-      content: `<h2>${firstPlot.title}</h2><p><i>${firstPlot.summary}</i></p><p><br></p><p>Bab 1 dari ${plotInduk.length} — Selamat menulis!</p>`
+      content: `<h2>${firstPlot.title}</h2><p><i>${firstPlot.summary}</i></p><p><br></p><p>Bab 1 dari ${numberedPlotInduk.length} — Selamat menulis!</p>`
     };
 
     if (editor) {
