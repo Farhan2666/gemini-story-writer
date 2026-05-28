@@ -64,12 +64,27 @@ export async function generatePlotOutline(premise: string, targetBabCount: numbe
   const systemPrompt = `Anda adalah seorang novelis dan arsitek cerita jenius. Tugas Anda adalah merancang kerangka novel yang kokoh, berdimensi, dan penuh ketegangan dramatik.
 
 [PRINSIP KERANGKA CERITA]
-1. STRUKTUR 3 BABAK: Setiap bab harus punya fungsi naratif — pembukaan (exposition), penanaman konflik (rising action), atau klimaks/resolusi parsial.
-2. KARAKTER BERCERITA: Jangan buat bab yang hanya deskripsi dunia. Setiap bab harus dimajukan oleh keputusan atau reaksi karakter.
-3. KETEGANGAN BERJENJANG: Konflik tidak harus selesai di satu bab. Biarkan misteri menggantung, tanam pertanyaan yang membuat pembaca ingin lanjut ke bab berikutnya.
-4. VARIASI EMOSI: Campur ketegangan, kehangatan, kesedihan, dan kejutan dalam proporsi yang alami — jangan datar.
-5. KONSISTENSI LORE: Patuhi aturan dunia dan karakter yang sudah ditetapkan.
-6. PACING DINAMIS: Bab awal untuk pengenalan, bab tengah untuk pengembangan konflik, bab akhir untuk klimaks dan resolusi.
+1. KARAKTER BERCERITA: Jangan buat bab yang hanya deskripsi dunia. Setiap bab harus dimajukan oleh keputusan atau reaksi karakter.
+2. KETEGANGAN BERJENJANG: Konflik tidak harus selesai di satu bab. Biarkan misteri menggantung, tanam pertanyaan yang membuat pembaca ingin lanjut ke bab berikutnya.
+3. VARIASI EMOSI: Campur ketegangan, kehangatan, kesedihan, dan kejutan dalam proporsi yang alami — jangan datar.
+4. KONSISTENSI LORE: Patuhi aturan dunia dan karakter yang sudah ditetapkan.
+
+[ATURAN CHRONOLOGICAL PACING - WAJIB DIPATUHI]
+Total bab yang harus dibuat: ${targetBabCount}. Anda WAJIB membagi perkembangan cerita secara proporsional sesuai rumus berikut:
+
+- AWAL (Bab 1 sampai sekitar Bab ${Math.ceil(targetBabCount / 3)}):
+  Fokus pada awal mula, pengenalan dunia dan karakter secara mendalam, proses perjuangan awal, serta kegagalan atau hambatan pertama. DILARANG memberikan kesuksesan instan atau lompatan waktu (time-skip) yang ekstrem di fase ini.
+
+- TENGAH (Bab ${Math.ceil(targetBabCount / 3) + 1} sampai sekitar Bab ${targetBabCount - 3}):
+  Fokus pada peningkatan konflik, pengenalan rival/antagonis, rintangan yang semakin berat, dan perkembangan karakter yang gradual. Setiap bab harus terasa sebagai batu loncatan alami menuju klimaks.
+
+- AKHIR (3 bab terakhir: Bab ${targetBabCount - 2} sampai Bab ${targetBabCount}):
+  Baru pada fase ini perbolehkan terjadinya klimaks, pencapaian puncak/kesuksesan, dan resolusi cerita. Bab terakhir harus memberikan kepuasan emosional tanpa terasa terburu-buru.
+
+LARANGAN KERAS:
+- DILARANG membuat lompatan waktu (time-skip) yang terlalu ekstrem di antara bab yang berurutan.
+- DILARANG memberikan resolusi atau kesuksesan instan kepada karakter utama di bab-bab awal.
+- DILARANG menulis summary yang terlalu pendek atau tidak informatif — setiap summary harus 2-3 kalimat yang jelas.
 
 ${worldContext ? `${worldContext}\n` : ''}${characterContext ? `${characterContext}\n` : ''}
 
