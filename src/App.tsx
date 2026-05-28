@@ -331,12 +331,7 @@ export default function App() {
   // Compile full novel recursively
   const compileContentRecursively = (sourceNodes: StoryNode[], parentId: string | null, depth = 0): string => {
     const levelNodes = sourceNodes.filter(n => n.parentId === parentId);
-    
-    // Sort folders first, then chapters
-    const sortedNodes = [...levelNodes].sort((a, b) => {
-      if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
-      return a.title.localeCompare(b.title);
-    });
+    const sortedNodes = [...levelNodes].sort(sortChapters);
 
     let text = "";
     sortedNodes.forEach(node => {
@@ -577,10 +572,7 @@ export default function App() {
     const list: { id: string; title: string; content: string }[] = [];
     const traverse = (parentId: string | null) => {
       const levelNodes = nodes.filter(n => n.parentId === parentId);
-      const sorted = [...levelNodes].sort((a, b) => {
-        if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
-        return a.title.localeCompare(b.title);
-      });
+      const sorted = [...levelNodes].sort(sortChapters);
       sorted.forEach(node => {
         if (node.type === 'folder') {
           traverse(node.id);
@@ -790,12 +782,17 @@ export default function App() {
   const activeChapterTitle = nodes.find(n => n.id === activeChapterId && n.type === 'chapter')?.title || 'Bab';
 
   // Recursive Sidebar Tree Nodes renderer
+  const sortChapters = (a: StoryNode, b: StoryNode) => {
+    if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+    const numA = parseInt(a.title.match(/Bab\s*(\d+)/i)?.[1] || '0');
+    const numB = parseInt(b.title.match(/Bab\s*(\d+)/i)?.[1] || '0');
+    if (numA && numB) return numA - numB;
+    return a.title.localeCompare(b.title);
+  };
+
   const renderTreeNodes = (parentId: string | null, depth = 0) => {
     const levelNodes = nodes.filter(n => n.parentId === parentId);
-    const sortedNodes = [...levelNodes].sort((a, b) => {
-      if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
-      return a.title.localeCompare(b.title);
-    });
+    const sortedNodes = [...levelNodes].sort(sortChapters);
 
     return sortedNodes.map(node => {
       const isFolder = node.type === 'folder';
@@ -1272,10 +1269,7 @@ export default function App() {
           const list: StoryNode[] = [];
           const traverse = (parentId: string | null) => {
             const levelNodes = nodes.filter(n => n.parentId === parentId);
-            const sorted = [...levelNodes].sort((a, b) => {
-              if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
-              return a.title.localeCompare(b.title);
-            });
+            const sorted = [...levelNodes].sort(sortChapters);
             sorted.forEach(node => {
               if (node.type === 'folder') {
                 traverse(node.id);
