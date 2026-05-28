@@ -1,101 +1,28 @@
 import { useState } from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
-import { generateAIContent } from '../utils/ai';
+import { generatePlotOutline } from '../utils/novelGenerator';
+import type { PlotBab } from '../utils/novelGenerator';
 
 interface OutlinerProps {
-  onChaptersGenerated: (chapters: { title: string; content: string }[]) => void;
+  onPlotGenerated: (premise: string, plotInduk: PlotBab[]) => void;
 }
 
-export default function Outliner({ onChaptersGenerated }: OutlinerProps) {
+const BAB_COUNT_OPTIONS = [5, 10, 15, 20, 25, 30, 40, 50];
+
+export default function Outliner({ onPlotGenerated }: OutlinerProps) {
   const [premise, setPremise] = useState('');
+  const [babCount, setBabCount] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
 
-  const generateOutline = async () => {
+  const generatePlot = async () => {
     if (!premise.trim() || isLoading) return;
 
     setIsLoading(true);
 
     try {
-      // Build Rich Context
-      const savedChars = localStorage.getItem('fictify-characters');
-      const savedRels = localStorage.getItem('fictify-relationships');
-      const savedWorld = localStorage.getItem('fictify-worldview');
-
-      let characterContext = '';
-      if (savedChars) {
-        const chars = JSON.parse(savedChars);
-        characterContext += 'DAFTAR KARAKTER:\n';
-        chars.forEach((char: any) => {
-          characterContext += `- ${char.name} (${char.role || 'Figuran'}): ${char.background || 'Tidak ada deskripsi.'}\n`;
-        });
-
-        if (savedRels) {
-          const rels = JSON.parse(savedRels);
-          const activeRels = rels.filter((r: any) =>
-            chars.some((c: any) => c.id === r.fromId) && chars.some((c: any) => c.id === r.toId)
-          );
-          if (activeRels.length > 0) {
-            characterContext += '\nHUBUNGAN ANTAR KARAKTER:\n';
-            activeRels.forEach((r: any) => {
-              const from = chars.find((c: any) => c.id === r.fromId);
-              const to = chars.find((c: any) => c.id === r.toId);
-              if (from && to) {
-                characterContext += `- ${from.name} ↔ ${to.name}: ${r.type}\n`;
-              }
-            });
-          }
-        }
-      }
-
-      let worldContext = '';
-      if (savedWorld) {
-        const w = JSON.parse(savedWorld);
-        worldContext += 'ATURAN DUNIA:\n';
-        if (w.magicSystem) worldContext += `- Sistem Kekuatan/Sihir: ${w.magicSystem}\n`;
-        if (w.geography) worldContext += `- Geografi & Lokasi: ${w.geography}\n`;
-        if (w.history) worldContext += `- Sejarah & Faksi: ${w.history}\n`;
-      }
-
-      const systemPrompt = `Anda adalah seorang novelis dan arsitek cerita jenius. Tugas Anda adalah merancang kerangka novel yang kokoh, berdimensi, dan penuh ketegangan dramatik.
-
-[PRINSIP KERANGKA CERITA]
-1. STRUKTUR 3 BABAK: Setiap bab harus punya fungsi naratif — pembukaan (exposition), penanaman konflik (rising action), atau klimaks/resolusi parsial.
-2. KARAKTER BERCERITA: Jangan buat bab yang hanya deskripsi dunia. Setiap bab harus dimajukan oleh keputusan atau reaksi karakter.
-3. KETEGANGAN BERJENJANG: Konflik tidak harus selesai di satu bab. Biarkan misteri menggantung, tanam pertanyaan yang membuat pembaca ingin lanjut ke bab berikutnya.
-4. VARIASI EMOSI: Campur ketegangan, kehangatan, kesedihan, dan kejutan dalam proporsi yang alami — jangan datar.
-5. KONSISTENSI LORE: Patuhi aturan dunia dan karakter yang sudah ditetapkan.
-
-${worldContext ? `${worldContext}\n` : ''}${characterContext ? `${characterContext}\n` : ''}
-
-[FORMAT OUTPUT]
-RESPON WAJIB BERUPA JSON ARRAY TANPA markdown backticks, dengan format:
-[
-  {
-    "title": "Judul Bab yang Menarik",
-    "summary": "Ringkasan naratif 2-3 kalimat tentang apa yang terjadi di bab ini, konflik apa yang muncul, dan bagaimana perasaan/perubahan karakter."
-  }
-]`;
-
-      const reply = await generateAIContent(
-        [{ role: 'user', text: `Buatkan kerangka cerita 3-5 bab berdasarkan premis berikut:\n\nPremis: "${premise}"` }],
-        0.7,
-        systemPrompt
-      );
-      
-      const cleanedReply = reply.replace(/```json/g, '').replace(/```/g, '').trim();
-      const generatedChapters = JSON.parse(cleanedReply);
-
-      if (Array.isArray(generatedChapters)) {
-        const mappedChapters = generatedChapters.map((ch: any) => ({
-          title: ch.title,
-          content: `<h2>Ringkasan Plot Bab:</h2><p><i>${ch.summary}</i></p><p><br></p><p>Mulai ceritamu di sini...</p>`
-        }));
-        onChaptersGenerated(mappedChapters);
-        setPremise('');
-      } else {
-        throw new Error("Format balasan AI tidak sesuai.");
-      }
-
+      const plotInduk = await generatePlotOutline(premise, babCount);
+      onPlotGenerated(premise, plotInduk);
+      setPremise('');
     } catch (error: any) {
       console.error(error);
       alert('Terjadi kesalahan saat memanggil AI: ' + error.message);
@@ -119,7 +46,7 @@ RESPON WAJIB BERUPA JSON ARRAY TANPA markdown backticks, dengan format:
               AI Story Outliner
             </h2>
             <p className="text-gray-400 mb-8 leading-relaxed">
-              Tuliskan 1 kalimat ide mentah Anda. Fictify akan merakitnya menjadi kerangka bab yang utuh dan otomatis membuatkan kerangkanya di daftar bab Anda!
+              Tuliskan 1 kalimat ide mentah Anda dan tentukan jumlah bab. Fictify akan membuat <span className="text-purple-300 font-semibold">Plot Induk</span> untuk seluruh bab, lalu menulisnya satu per satu saat Anda siap!
             </p>
 
             <div className="space-y-6">
@@ -134,23 +61,50 @@ RESPON WAJIB BERUPA JSON ARRAY TANPA markdown backticks, dengan format:
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Jumlah Bab</label>
+                <div className="flex flex-wrap gap-2">
+                  {BAB_COUNT_OPTIONS.map(count => (
+                    <button
+                      key={count}
+                      onClick={() => setBabCount(count)}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                        babCount === count
+                          ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40'
+                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700 border border-gray-700'
+                      }`}
+                    >
+                      {count} Bab
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <button 
-                onClick={generateOutline}
+                onClick={generatePlot}
                 disabled={isLoading || !premise.trim()}
                 className="w-full py-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold tracking-wide shadow-lg shadow-purple-900/50 transition-all active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50 disabled:active:scale-100 cursor-pointer"
               >
                 {isLoading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Fictify Sedang Merakit Cerita...</span>
+                    <span>Fictify Sedang Merancang Plot...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5" />
-                    <span>Sihir Kerangka Otomatis</span>
+                    <span>Generate Plot & Mulai Bab 1</span>
                   </>
                 )}
               </button>
+            </div>
+
+            <div className="mt-6 p-4 bg-gray-900/50 rounded-xl border border-gray-800">
+              <p className="text-xs text-gray-400 leading-relaxed">
+                <strong className="text-purple-400">Cara Kerja Baru:</strong> AI akan membuat kerangka (plot induk) untuk {babCount} bab terlebih dahulu. 
+                Setelah itu, Anda bisa membaca dan mengedit Bab 1, lalu klik <strong className="text-emerald-400">"Generate Bab Selanjutnya"</strong> 
+                untuk menulis bab berikutnya satu per satu. Setiap bab akan otomatis diringkas sebagai memori cerita!
+              </p>
             </div>
           </div>
         </div>

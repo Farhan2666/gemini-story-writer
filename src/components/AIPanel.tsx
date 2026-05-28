@@ -87,6 +87,33 @@ export default function AIPanel({
     return '';
   };
 
+  const buildNovelMetaContext = (): string => {
+    try {
+      const saved = localStorage.getItem('fictify-novel-meta');
+      if (!saved) return '';
+      const meta = JSON.parse(saved);
+      let result = '';
+
+      result += `PLOT UTAMA NOVEL (${meta.plotInduk.length} bab):\n`;
+      meta.plotInduk.forEach((plot: any, i: number) => {
+        const status = i < meta.generatedBabCount ? '[SUDAH DITULIS]' : (i === meta.generatedBabCount ? '[SEDANG DITULIS]' : '[BELUM]');
+        result += `  Bab ${i + 1}: ${plot.title} ${status}\n`;
+      });
+
+      const summaries = Object.entries(meta.chapterSummaries || {});
+      if (summaries.length > 0) {
+        result += '\nRINGKASAN BAB-BAB SEBELUMNYA (Rolling Memory):\n';
+        summaries.forEach(([, summary]) => {
+          result += `- ${summary}\n`;
+        });
+      }
+
+      return result;
+    } catch {
+      return '';
+    }
+  };
+
   const generateAI = async (promptType: string) => {
     if (!editor) return;
 
@@ -120,6 +147,8 @@ export default function AIPanel({
       }
 
       if (promptType === 'continue') {
+        const novelMetaContext = buildNovelMetaContext();
+
         const masterSystemPrompt = `Anda adalah seorang AI Asisten Penulis Novel Profesional dan Co-Writer handal. Tugas Anda adalah membantu menulis, melanjutkan, dan memoles cerita secara organik dengan standar sastra yang tinggi.
 
 [PRINSIP UTAMA PENULISAN]
@@ -132,6 +161,9 @@ export default function AIPanel({
 [KONSISTENSI KARAKTER & PETA HUBUNGAN]
 Anda wajib patuh pada detail karakter yang terlibat di bawah ini. Jaga agar tindakan, cara berbicara, dan keputusan mereka tetap konsisten dengan kepribadian dan dinamika hubungan mereka:
 ${characterContext}
+
+[ARAHAN PLOT NOVEL - Patuhi plot induk ini]
+${novelMetaContext || 'Tidak ada plot induk yang ditetapkan.'}
 
 [STRUKTUR & KONTEKS ACUAN]
 Gunakan potongan teks bab sebelumnya dan teks aktif saat ini sebagai fondasi kontinuitas agar tidak terjadi lubang plot (plot hole) atau perubahan suasana yang mendadak:
@@ -195,9 +227,11 @@ ATURAN PERBAIKAN:
         typeNextChar();
 
       } else if (promptType === 'idea') {
+        const novelMetaContext = buildNovelMetaContext();
         const systemPrompt = `Anda adalah seorang kreator cerita yang jenius dan out-of-the-box. Berdasarkan konteks dunia, karakter, dan cerita yang ada, berikan 3 ide konflik atau plot twist orisinal yang mengejutkan dan tidak klise.
 
-${worldContext ? `${worldContext}\n` : ''}${characterContext}`;
+${worldContext ? `${worldContext}\n` : ''}${characterContext}
+${novelMetaContext ? `\n[PLOT UTAMA NOVEL - Pastikan ide sesuai arah cerita]:\n${novelMetaContext}` : ''}`;
 
         const aiResult = await generateAIContent(
           [{ role: 'user', text: `Berdasarkan cerita berikut, berikan 3 ide konflik atau plot twist yang bisa terjadi selanjutnya:\n\n${currentText}` }],

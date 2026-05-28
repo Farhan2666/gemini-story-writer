@@ -21,6 +21,11 @@ import CloudManager from './components/CloudManager';
 import type { UserProfile } from './components/CloudManager';
 import CharacterMindMap from './components/CharacterMindMap';
 import APISettings from './components/APISettings';
+import { 
+  generateChapterContent, 
+  summarizeChapterContent 
+} from './utils/novelGenerator';
+import type { NovelMeta, PlotBab } from './utils/novelGenerator';
 
 export interface StoryNode {
   id: string;
@@ -56,6 +61,12 @@ export default function App() {
   ]);
   const [activeChapterId, setActiveChapterId] = useState<string>('ch-1');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [novelMeta, setNovelMeta] = useState<NovelMeta | null>(() => {
+    try {
+      const saved = localStorage.getItem('fictify-novel-meta');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -424,11 +435,12 @@ export default function App() {
     );
     
     const projectData = {
-      version: "2.0",
+      version: "3.0",
       nodes: updatedNodes,
       characters: JSON.parse(localStorage.getItem('fictify-characters') || '[]'),
       world: JSON.parse(localStorage.getItem('fictify-worldview') || '{}'),
-      notes: localStorage.getItem('fictify-notes') || ''
+      notes: localStorage.getItem('fictify-notes') || '',
+      novelMeta: novelMeta,
     };
 
     const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
@@ -476,6 +488,10 @@ export default function App() {
         if (data.characters) localStorage.setItem('fictify-characters', JSON.stringify(data.characters));
         if (data.world) localStorage.setItem('fictify-worldview', JSON.stringify(data.world));
         if (data.notes !== undefined) localStorage.setItem('fictify-notes', data.notes);
+        if (data.novelMeta) {
+          localStorage.setItem('fictify-novel-meta', JSON.stringify(data.novelMeta));
+          setNovelMeta(data.novelMeta);
+        }
 
         showToast("Proyek berhasil dipulihkan!");
         setTimeout(() => window.location.reload(), 1000);
@@ -500,30 +516,139 @@ export default function App() {
     if (cloudData.characters) localStorage.setItem('fictify-characters', JSON.stringify(cloudData.characters));
     if (cloudData.world) localStorage.setItem('fictify-worldview', JSON.stringify(cloudData.world));
     if (cloudData.notes !== undefined) localStorage.setItem('fictify-notes', cloudData.notes);
+    if (cloudData.novelMeta) {
+      localStorage.setItem('fictify-novel-meta', JSON.stringify(cloudData.novelMeta));
+      setNovelMeta(cloudData.novelMeta);
+    }
 
     showToast("Restorasi data dari Fictify Berhasil!");
     setTimeout(() => window.location.reload(), 800);
   };
 
-  const handleOutlineGenerated = (newChapters: {title: string; content: string}[]) => {
-    const generated = newChapters.map((ch, idx) => ({
-      id: `ch-ai-${Date.now()}-${idx}`,
-      title: ch.title,
-      type: 'chapter' as const,
+  const saveNovelMeta = (meta: NovelMeta | null) => {
+    setNovelMeta(meta);
+    if (meta) {
+      localStorage.setItem('fictify-novel-meta', JSON.stringify(meta));
+    } else {
+      localStorage.removeItem('fictify-novel-meta');
+    }
+  };
+
+  const handlePlotGenerated = (premise: string, plotInduk: PlotBab[]) => {
+    const meta: NovelMeta = {
+      premise,
+      targetBabCount: plotInduk.length,
+      plotInduk,
+      generatedBabCount: 1,
+      chapterSummaries: {},
+      isComplete: false,
+    };
+    saveNovelMeta(meta);
+
+    const firstPlot = plotInduk[0];
+    const newId = `ch-gen-${Date.now()}-0`;
+    const firstChapter: StoryNode = {
+      id: newId,
+      title: firstPlot.title,
+      type: 'chapter',
       parentId: null,
-      content: ch.content
-    }));
-    
+      content: `<h2>${firstPlot.title}</h2><p><i>${firstPlot.summary}</i></p><p><br></p><p>Bab 1 dari ${plotInduk.length} — Selamat menulis!</p>`
+    };
+
     if (editor) {
       const updatedNodes = nodes.map(n => 
-         n.id === activeChapterId ? { ...n, content: editor.getHTML() } : n
+        n.id === activeChapterId ? { ...n, content: editor.getHTML() } : n
       );
-      const finalNodes = [...updatedNodes, ...generated];
+      const finalNodes = [...updatedNodes, firstChapter];
       setNodes(finalNodes);
       localStorage.setItem('fictify-nodes', JSON.stringify(finalNodes));
-      setActiveChapterId(generated[0].id);
+      setActiveChapterId(newId);
       setActiveTab('chapter');
+      showToast(`Plot ${plotInduk.length} bab berhasil dibuat! Mulai menulis Bab 1.`);
     }
+  };
+
+  const getPreviousChapterForGeneration = (): { id: string; title: string; content: string } | null => {
+    const list: { id: string; title: string; content: string }[] = [];
+    const traverse = (parentId: string | null) => {
+      const levelNodes = nodes.filter(n => n.parentId === parentId);
+      const sorted = [...levelNodes].sort((a, b) => {
+        if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+        return a.title.localeCompare(b.title);
+      });
+      sorted.forEach(node => {
+        if (node.type === 'folder') {
+          traverse(node.id);
+        } else {
+          list.push({ id: node.id, title: node.title, content: node.content || '' });
+        }
+      });
+    };
+    traverse(null);
+    const activeIndex = list.findIndex(ch => ch.id === activeChapterId);
+    return activeIndex > 0 ? list[activeIndex - 1] : null;
+  };
+
+  const generateNextChapter = async () => {
+    if (!novelMeta || !editor) return;
+
+    const currentChapterIndex = novelMeta.generatedBabCount;
+    if (currentChapterIndex >= novelMeta.targetBabCount) {
+      showToast('Semua bab sudah selesai dibuat!');
+      return;
+    }
+
+    saveStory();
+    setIsGenerating(true);
+
+    try {
+      const prevChapter = getPreviousChapterForGeneration();
+      const content = await generateChapterContent(
+        novelMeta,
+        currentChapterIndex,
+        prevChapter?.content,
+      );
+
+      const newId = `ch-gen-${Date.now()}-${currentChapterIndex}`;
+      const newChapter: StoryNode = {
+        id: newId,
+        title: novelMeta.plotInduk[currentChapterIndex].title,
+        type: 'chapter',
+        parentId: null,
+        content,
+      };
+      const updatedNodes = [...nodes, newChapter];
+      setNodes(updatedNodes);
+      localStorage.setItem('fictify-nodes', JSON.stringify(updatedNodes));
+      setActiveChapterId(newId);
+
+      const summary = await summarizeChapterContent(content);
+      const updatedMeta: NovelMeta = {
+        ...novelMeta,
+        generatedBabCount: currentChapterIndex + 1,
+        chapterSummaries: {
+          ...novelMeta.chapterSummaries,
+          [newId]: summary,
+        },
+        isComplete: currentChapterIndex + 1 >= novelMeta.targetBabCount,
+      };
+      saveNovelMeta(updatedMeta);
+      showToast(`Bab ${currentChapterIndex + 1} dari ${novelMeta.targetBabCount} berhasil dibuat!`);
+    } catch (error: any) {
+      console.error(error);
+      alert('Gagal membuat bab: ' + error.message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleTamatkanCerita = async () => {
+    if (!novelMeta) return;
+    if (!confirm('Akhiri cerita sekarang? Bab yang belum ditulis akan ditandai sebagai selesai.')) return;
+
+    const updatedMeta: NovelMeta = { ...novelMeta, isComplete: true };
+    saveNovelMeta(updatedMeta);
+    showToast('Cerita ditamatkan!');
   };
 
   const handleSpeak = () => {
@@ -563,7 +688,7 @@ export default function App() {
       return <NotesManager />;
     }
     if (activeTab === 'outliner') {
-      return <Outliner onChaptersGenerated={handleOutlineGenerated} />;
+      return <Outliner onPlotGenerated={handlePlotGenerated} />;
     }
     if (activeTab === 'cover') {
       return <CoverGenerator />;
@@ -585,8 +710,63 @@ export default function App() {
       );
     }
     return (
-      <div className={`flex-1 overflow-auto p-3 sm:p-6 lg:p-8 relative transition-all duration-500 ${isZenMode ? 'bg-black' : ''}`}>
+        <div className={`flex-1 overflow-auto p-3 sm:p-6 lg:p-8 relative transition-all duration-500 ${isZenMode ? 'bg-black' : ''}`}>
         <div className={`max-w-3xl mx-auto rounded-xl shadow-xl overflow-hidden relative transition-all duration-500 ${isZenMode ? 'bg-black border-transparent' : 'bg-gray-800/30 border border-gray-700/50'}`}>
+           
+           {novelMeta && (
+             <div className="px-4 pt-4 pb-0 flex items-center justify-between border-b border-gray-700/30">
+               <div className="flex items-center gap-2">
+                 <div className="flex gap-1">
+                   {Array.from({ length: Math.min(novelMeta.targetBabCount, 50) }).map((_, i) => (
+                     <div
+                       key={i}
+                       className={`w-2 h-2 rounded-full ${
+                         i < novelMeta.generatedBabCount
+                           ? 'bg-emerald-500'
+                           : i === novelMeta.generatedBabCount
+                           ? 'bg-purple-500 animate-pulse'
+                           : 'bg-gray-700'
+                       }`}
+                       title={`Bab ${i + 1}`}
+                     />
+                   ))}
+                   {novelMeta.targetBabCount > 50 && (
+                     <span className="text-[10px] text-gray-500 ml-1">+{novelMeta.targetBabCount - 50}</span>
+                   )}
+                 </div>
+                 <span className="text-xs text-gray-500 ml-2">
+                   {novelMeta.generatedBabCount} / {novelMeta.targetBabCount} bab
+                   {novelMeta.isComplete && ' ✅ Selesai'}
+                 </span>
+               </div>
+               <div className="flex gap-2">
+                 {novelMeta && !novelMeta.isComplete && novelMeta.generatedBabCount < novelMeta.targetBabCount && (
+                   <button
+                     onClick={generateNextChapter}
+                     disabled={isGenerating}
+                     className="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800/50 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg shadow-purple-900/20 transition-all cursor-pointer disabled:cursor-not-allowed"
+                   >
+                     {isGenerating ? (
+                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                     ) : (
+                       <Wand2 className="w-3.5 h-3.5" />
+                     )}
+                     {isGenerating ? 'Menulis...' : 'Generate Bab Selanjutnya'}
+                   </button>
+                 )}
+                 {novelMeta && !novelMeta.isComplete && (
+                   <button
+                     onClick={handleTamatkanCerita}
+                     disabled={isGenerating}
+                     className="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold border border-gray-700 transition-all cursor-pointer disabled:opacity-50"
+                   >
+                     Tamatkan Cerita
+                   </button>
+                 )}
+               </div>
+             </div>
+           )}
+
            <EditorContent editor={editor} className="min-h-[60vh] max-h-[70vh] overflow-y-auto" />
            
            {isGenerating && (
