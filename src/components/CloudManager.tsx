@@ -97,7 +97,7 @@ export default function CloudManager({
           avatar: selectedAvatar,
           joinedDate: new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })
         };
-        localStorage.setItem(`gemini-cloud-user-${email}`, JSON.stringify({ ...newUser, password }));
+        localStorage.setItem(`gemini-cloud-user-${email}`, JSON.stringify({ ...newUser, password: btoa(password) }));
         localStorage.setItem('fictify-cloud-user', JSON.stringify(newUser));
         setUser(newUser);
         // Create initial revision
@@ -125,7 +125,7 @@ export default function CloudManager({
         }
         try {
           const cred = JSON.parse(savedUserCred);
-          if (cred.password !== password) {
+          if (cred.password !== btoa(password)) {
             setAuthError('Kata sandi salah. Silakan coba lagi.');
             return;
           }
@@ -411,7 +411,7 @@ export default function CloudManager({
 
                 <div className="mt-6 border-t border-gray-850 pt-4 text-center">
                   <p className="text-[11px] text-gray-500 leading-relaxed">
-                    🛡️ <b>Enkripsi AES-256 Sempurna:</b> Novel Anda dilindungi dengan standar keamanan tinggi di pelayan awan kami agar karya orisinal Anda bebas dari pembajakan.
+                    💾 <b>Penyimpanan Lokal Browser:</b> Data novel Anda disimpan aman di perangkat Anda sendiri secara offline.
                   </p>
                 </div>
 

@@ -14,6 +14,7 @@ export default function CharacterManager() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newChar, setNewChar] = useState({ name: '', role: '', background: '', imageUrl: '' });
+  const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const saved = localStorage.getItem('fictify-characters');
@@ -206,8 +207,8 @@ export default function CharacterManager() {
                 </button>
               </div>
               <div className="flex items-center gap-3 mb-3">
-                {char.imageUrl ? (
-                  <img src={char.imageUrl} alt={char.name} className="w-12 h-12 rounded-full object-cover border-2 border-purple-500/50" />
+                {char.imageUrl && !brokenImages.has(char.id) ? (
+                  <img src={char.imageUrl} alt={char.name} className="w-12 h-12 rounded-full object-cover border-2 border-purple-500/50" onError={() => setBrokenImages(prev => new Set(prev).add(char.id))} />
                 ) : (
                   <div className="w-12 h-12 rounded-full bg-purple-900/50 flex items-center justify-center border border-purple-500/30">
                     <User className="w-6 h-6 text-purple-300" />

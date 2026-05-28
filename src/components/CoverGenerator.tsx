@@ -179,15 +179,19 @@ export default function CoverGenerator() {
                 
                 {/* Overlay Aksi saat Hover */}
                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-4">
-                  <a 
-                    href={imageUrl} 
-                    target="_blank" 
-                    rel="noreferrer"
-                    download="cover.jpg"
-                    className="bg-white hover:bg-gray-100 text-gray-900 px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:scale-105 transition-all text-sm shadow-lg shadow-black/40"
+                  <button 
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = imageUrl;
+                      link.download = 'cover.jpg';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    className="bg-white hover:bg-gray-100 text-gray-900 px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:scale-105 transition-all text-sm shadow-lg shadow-black/40 cursor-pointer"
                   >
-                    <Download className="w-4 h-4" /> Buka Ukuran Penuh
-                  </a>
+                    <Download className="w-4 h-4" /> Unduh Sampul
+                  </button>
                   
                   <button 
                     onClick={deleteCover}

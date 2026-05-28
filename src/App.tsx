@@ -1141,7 +1141,6 @@ export default function App() {
                 editor={editor} 
                 isGenerating={isGenerating} 
                 setIsGenerating={setIsGenerating} 
-                currentChapterTitle={activeChapterTitle}
                 previousChapterTitle={prevChapter?.title}
                 previousChapterContent={prevChapter?.content}
               />

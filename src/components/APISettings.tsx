@@ -136,6 +136,11 @@ export default function APISettings({ isOpen, onClose, onSaveNotify }: APISettin
       return;
     }
 
+    if (!apiKey.trim() && provider !== 'gemini') {
+      alert('Kunci API tidak boleh kosong.');
+      return;
+    }
+
     localStorage.setItem('fictify-api-provider', provider);
     localStorage.setItem('fictify-api-key', apiKey.trim());
     localStorage.setItem('fictify-api-model', modelToSave);

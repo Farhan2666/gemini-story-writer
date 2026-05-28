@@ -16,49 +16,77 @@ export default function Outliner({ onChaptersGenerated }: OutlinerProps) {
     setIsLoading(true);
 
     try {
-      // Build Context
+      // Build Rich Context
       const savedChars = localStorage.getItem('fictify-characters');
+      const savedRels = localStorage.getItem('fictify-relationships');
       const savedWorld = localStorage.getItem('fictify-worldview');
-      let contextStr = 'Konteks Dunia dan Karakter:\n';
-      
+
+      let characterContext = '';
+      if (savedChars) {
+        const chars = JSON.parse(savedChars);
+        characterContext += 'DAFTAR KARAKTER:\n';
+        chars.forEach((char: any) => {
+          characterContext += `- ${char.name} (${char.role || 'Figuran'}): ${char.background || 'Tidak ada deskripsi.'}\n`;
+        });
+
+        if (savedRels) {
+          const rels = JSON.parse(savedRels);
+          const activeRels = rels.filter((r: any) =>
+            chars.some((c: any) => c.id === r.fromId) && chars.some((c: any) => c.id === r.toId)
+          );
+          if (activeRels.length > 0) {
+            characterContext += '\nHUBUNGAN ANTAR KARAKTER:\n';
+            activeRels.forEach((r: any) => {
+              const from = chars.find((c: any) => c.id === r.fromId);
+              const to = chars.find((c: any) => c.id === r.toId);
+              if (from && to) {
+                characterContext += `- ${from.name} ↔ ${to.name}: ${r.type}\n`;
+              }
+            });
+          }
+        }
+      }
+
+      let worldContext = '';
       if (savedWorld) {
         const w = JSON.parse(savedWorld);
-        contextStr += `ATURAN DUNIA:\nSistem Sihir: ${w.magicSystem}\nGeografi: ${w.geography}\nSejarah: ${w.history}\n\n`;
-      }
-      
-      if (savedChars) {
-        const c = JSON.parse(savedChars);
-        contextStr += 'KARAKTER:\n';
-        c.forEach((char: any) => {
-          contextStr += `- ${char.name} (${char.role}): ${char.background}\n`;
-        });
-        contextStr += '\n';
+        worldContext += 'ATURAN DUNIA:\n';
+        if (w.magicSystem) worldContext += `- Sistem Kekuatan/Sihir: ${w.magicSystem}\n`;
+        if (w.geography) worldContext += `- Geografi & Lokasi: ${w.geography}\n`;
+        if (w.history) worldContext += `- Sejarah & Faksi: ${w.history}\n`;
       }
 
-      const promptText = `Kamu adalah seorang penulis novel jenius. Buatkan kerangka cerita (outline) berdasarkan premis berikut dan konteks dunia yang diberikan.
-Premis: "${premise}"
+      const systemPrompt = `Anda adalah seorang novelis dan arsitek cerita jenius. Tugas Anda adalah merancang kerangka novel yang kokoh, berdimensi, dan penuh ketegangan dramatik.
 
-${contextStr}
+[PRINSIP KERANGKA CERITA]
+1. STRUKTUR 3 BABAK: Setiap bab harus punya fungsi naratif — pembukaan (exposition), penanaman konflik (rising action), atau klimaks/resolusi parsial.
+2. KARAKTER BERCERITA: Jangan buat bab yang hanya deskripsi dunia. Setiap bab harus dimajukan oleh keputusan atau reaksi karakter.
+3. KETEGANGAN BERJENJANG: Konflik tidak harus selesai di satu bab. Biarkan misteri menggantung, tanam pertanyaan yang membuat pembaca ingin lanjut ke bab berikutnya.
+4. VARIASI EMOSI: Campur ketegangan, kehangatan, kesedihan, dan kejutan dalam proporsi yang alami — jangan datar.
+5. KONSISTENSI LORE: Patuhi aturan dunia dan karakter yang sudah ditetapkan.
 
-Tugas:
-Pecah cerita ini menjadi 3 sampai 5 bab.
-Sertakan ringkasan (summary) apa yang terjadi di setiap bab.
-OUTPUT HARUS BERUPA JSON ARRAY murni tanpa markdown backticks (tanpa \`\`\`json), dengan format:
+${worldContext ? `${worldContext}\n` : ''}${characterContext ? `${characterContext}\n` : ''}
+
+[FORMAT OUTPUT]
+RESPON WAJIB BERUPA JSON ARRAY TANPA markdown backticks, dengan format:
 [
   {
-    "title": "Judul Bab",
-    "summary": "Ringkasan cerita bab ini..."
+    "title": "Judul Bab yang Menarik",
+    "summary": "Ringkasan naratif 2-3 kalimat tentang apa yang terjadi di bab ini, konflik apa yang muncul, dan bagaimana perasaan/perubahan karakter."
   }
 ]`;
 
-      const reply = await generateAIContent([{ role: 'user', text: promptText }]);
+      const reply = await generateAIContent(
+        [{ role: 'user', text: `Buatkan kerangka cerita 3-5 bab berdasarkan premis berikut:\n\nPremis: "${premise}"` }],
+        0.7,
+        systemPrompt
+      );
       
-      // Clean up markdown if AI accidentally includes it
       const cleanedReply = reply.replace(/```json/g, '').replace(/```/g, '').trim();
       const generatedChapters = JSON.parse(cleanedReply);
 
       if (Array.isArray(generatedChapters)) {
-        const mappedChapters = generatedChapters.map(ch => ({
+        const mappedChapters = generatedChapters.map((ch: any) => ({
           title: ch.title,
           content: `<h2>Ringkasan Plot Bab:</h2><p><i>${ch.summary}</i></p><p><br></p><p>Mulai ceritamu di sini...</p>`
         }));

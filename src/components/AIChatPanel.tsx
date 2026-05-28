@@ -37,40 +37,70 @@ export default function AIChatPanel() {
     setIsLoading(true);
 
     try {
-      // Build Context
+      // Build Rich Context
       const savedChars = localStorage.getItem('fictify-characters');
+      const savedRels = localStorage.getItem('fictify-relationships');
       const savedWorld = localStorage.getItem('fictify-worldview');
-      let contextStr = 'Konteks Cerita (Jawablah pertanyaan user berdasarkan aturan ini):\n';
-      
-      if (savedWorld) {
-        const w = JSON.parse(savedWorld);
-        contextStr += `ATURAN DUNIA:\nSistem Sihir: ${w.magicSystem}\nGeografi: ${w.geography}\nSejarah: ${w.history}\n\n`;
-      }
-      
+
+      let characterContext = '';
       if (savedChars) {
-        const c = JSON.parse(savedChars);
-        contextStr += 'KARAKTER:\n';
-        c.forEach((char: any) => {
-          contextStr += `- ${char.name} (${char.role}): ${char.background}\n`;
+        const chars = JSON.parse(savedChars);
+        characterContext += 'DAFTAR KARAKTER:\n';
+        chars.forEach((char: any) => {
+          characterContext += `- ${char.name} (${char.role || 'Figuran'}): ${char.background || 'Tidak ada deskripsi.'}\n`;
         });
-        contextStr += '\n';
+
+        if (savedRels) {
+          const rels = JSON.parse(savedRels);
+          const activeRels = rels.filter((r: any) =>
+            chars.some((c: any) => c.id === r.fromId) && chars.some((c: any) => c.id === r.toId)
+          );
+          if (activeRels.length > 0) {
+            characterContext += '\nHUBUNGAN ANTAR KARAKTER:\n';
+            activeRels.forEach((r: any) => {
+              const from = chars.find((c: any) => c.id === r.fromId);
+              const to = chars.find((c: any) => c.id === r.toId);
+              if (from && to) {
+                characterContext += `- ${from.name} ↔ ${to.name}: ${r.type}\n`;
+              }
+            });
+          }
+        }
       }
 
-      // Build history for API
+      let worldContext = '';
+      if (savedWorld) {
+        const w = JSON.parse(savedWorld);
+        worldContext += 'ATURAN DUNIA:\n';
+        if (w.magicSystem) worldContext += `- Sistem Kekuatan/Sihir: ${w.magicSystem}\n`;
+        if (w.geography) worldContext += `- Geografi & Lokasi: ${w.geography}\n`;
+        if (w.history) worldContext += `- Sejarah & Faksi: ${w.history}\n`;
+      }
+
+      const systemPrompt = `Anda adalah Co-Writer AI untuk novel fiksi. Anda memahami dunia, karakter, dan relasi mereka secara mendalam.
+
+${worldContext ? `${worldContext}\n` : ''}${characterContext ? `${characterContext}\n` : ''}
+
+[PANDUAN MERESPON]
+1. Jawab pertanyaan user secara kontekstual berdasarkan lore dunia dan karakter yang sudah ditetapkan.
+2. Jika ditanya ide cerita, gunakan prinsip "Show, Don't Tell" — beri saran yang spesifik dan dapat ditulis, bukan abstrak.
+3. Jaga konsistensi: jangan menyarankan plot yang bertentangan dengan aturan dunia atau kepribadian karakter.
+4. Jika user bertanya di luar konteks cerita, tetap bantu dengan ramah.`;
+
       const apiHistory = messages.slice(1).map(m => ({
         role: m.role,
         text: m.text
       }));
-      
-      // Inject context secretly into the latest message
-      const latestMessageText = `${contextStr}\n\nPertanyaan User: ${userMsg}`;
 
-      const reply = await generateAIContent([
-        ...apiHistory,
-        { role: 'user', text: latestMessageText }
-      ]);
+      const reply = await generateAIContent(
+        [
+          ...apiHistory,
+          { role: 'user', text: userMsg }
+        ],
+        0.7,
+        systemPrompt
+      );
       
-      // Efek Mengetik Karakter demi Karakter (Typewriter Effect)
       setMessages(prev => [...prev, { role: 'model', text: '' }]);
       let index = 0;
       let currentReply = '';
@@ -87,7 +117,6 @@ export default function AIChatPanel() {
           });
           index++;
           
-          // Kecepatan mengetik dinamis (5ms - 20ms) agar terasa hidup dan cepat terbaca
           const delay = Math.random() * 15 + 5;
           typingTimeoutRef.current = setTimeout(typeNextChar, delay);
         } else {

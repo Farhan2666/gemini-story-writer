@@ -111,7 +111,8 @@ export async function testAIConnection(
 // Panggilan utama untuk menghasilkan konten AI
 export async function generateAIContent(
   messages: AIMessage[],
-  temperature: number = 0.7
+  temperature: number = 0.7,
+  systemInstruction?: string
 ): Promise<string> {
   const { provider, apiKey, model } = getAISettings();
 
@@ -121,7 +122,6 @@ export async function generateAIContent(
 
   try {
     if (provider === 'gemini') {
-      // Direct Google Gemini API
       const cleanModel = model.includes('/') ? model.split('/').pop() : model;
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${apiKey}`;
       
@@ -130,15 +130,21 @@ export async function generateAIContent(
         parts: [{ text: msg.text }]
       }));
 
+      const body: Record<string, any> = {
+        contents: payloadContents,
+        generationConfig: { temperature }
+      };
+
+      if (systemInstruction) {
+        body.systemInstruction = {
+          parts: [{ text: systemInstruction }]
+        };
+      }
+
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: payloadContents,
-          generationConfig: {
-            temperature
-          }
-        })
+        body: JSON.stringify(body)
       });
 
       if (!response.ok) {
@@ -151,7 +157,6 @@ export async function generateAIContent(
       if (!reply) throw new Error('API Gemini tidak mengembalikan konten teks.');
       return reply;
     } else {
-      // OpenAI-compatible API (openai, deepseek, groq, openrouter)
       const endpoint = getProviderEndpoint(provider);
       const headers: HeadersInit = {
         'Authorization': `Bearer ${apiKey}`,
@@ -163,10 +168,16 @@ export async function generateAIContent(
         headers['X-Title'] = 'Fictify';
       }
       
-      const payloadMessages = messages.map(msg => ({
+      const payloadMessages: { role: string; content: string }[] = [];
+
+      if (systemInstruction) {
+        payloadMessages.push({ role: 'system', content: systemInstruction });
+      }
+
+      payloadMessages.push(...messages.map(msg => ({
         role: msg.role === 'model' ? 'assistant' : 'user',
         content: msg.text
-      }));
+      })));
 
       const response = await fetch(endpoint, {
         method: 'POST',

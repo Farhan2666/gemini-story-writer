@@ -7,7 +7,6 @@ interface AIPanelProps {
   editor: Editor | null;
   isGenerating: boolean;
   setIsGenerating: (val: boolean) => void;
-  currentChapterTitle?: string;
   previousChapterTitle?: string;
   previousChapterContent?: string;
 }
@@ -16,7 +15,6 @@ export default function AIPanel({
   editor, 
   isGenerating, 
   setIsGenerating,
-  currentChapterTitle,
   previousChapterTitle,
   previousChapterContent
 }: AIPanelProps) {
@@ -32,143 +30,183 @@ export default function AIPanel({
     };
   }, []);
 
+  const buildCharacterContext = (): string => {
+    const savedChars = localStorage.getItem('fictify-characters');
+    const savedRels = localStorage.getItem('fictify-relationships');
+    let result = '';
+
+    if (savedChars) {
+      const chars = JSON.parse(savedChars);
+      result += 'DAFTAR KARAKTER:\n';
+      chars.forEach((char: any) => {
+        result += `- ${char.name} (${char.role || 'Figuran'}): ${char.background || 'Tidak ada deskripsi.'}\n`;
+      });
+
+      if (savedRels) {
+        const rels = JSON.parse(savedRels);
+        const activeRels = rels.filter((r: any) =>
+          chars.some((c: any) => c.id === r.fromId) && chars.some((c: any) => c.id === r.toId)
+        );
+        if (activeRels.length > 0) {
+          result += '\nHUBUNGAN ANTAR KARAKTER:\n';
+          activeRels.forEach((r: any) => {
+            const from = chars.find((c: any) => c.id === r.fromId);
+            const to = chars.find((c: any) => c.id === r.toId);
+            if (from && to) {
+              result += `- ${from.name} ↔ ${to.name}: ${r.type}\n`;
+            }
+          });
+        }
+      }
+    }
+    return result;
+  };
+
+  const buildWorldContext = (): string => {
+    const savedWorld = localStorage.getItem('fictify-worldview');
+    if (!savedWorld) return '';
+    const w = JSON.parse(savedWorld);
+    let result = 'ATURAN DUNIA:\n';
+    if (w.magicSystem) result += `- Sistem Kekuatan/Sihir: ${w.magicSystem}\n`;
+    if (w.geography) result += `- Geografi & Lokasi: ${w.geography}\n`;
+    if (w.history) result += `- Sejarah & Faksi: ${w.history}\n`;
+    return result;
+  };
+
+  const getChapterSummary = (): string => {
+    const html = editor?.getHTML() || '';
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    const headings = div.querySelectorAll('h2');
+    for (const h2 of headings) {
+      if (h2.textContent?.includes('Ringkasan Plot')) {
+        const next = h2.nextElementSibling;
+        if (next) return next.textContent || '';
+      }
+    }
+    return '';
+  };
+
   const generateAI = async (promptType: string) => {
     if (!editor) return;
 
     setIsGenerating(true);
     try {
-      // 1. Ambil Konteks dari LocalStorage
-      const savedChars = localStorage.getItem('fictify-characters');
-      const savedWorld = localStorage.getItem('fictify-worldview');
-      
-      let contextStr = '--- KONTEKS CERITA ---\n';
-      
-      if (savedWorld) {
-        const w = JSON.parse(savedWorld);
-        contextStr += `ATURAN DUNIA:\n- Sistem Sihir: ${w.magicSystem}\n- Geografi: ${w.geography}\n- Sejarah: ${w.history}\n\n`;
-      }
-      
-      if (savedChars) {
-        const c = JSON.parse(savedChars);
-        contextStr += 'KARAKTER YANG ADA:\n';
-        c.forEach((char: any) => {
-          contextStr += `- ${char.name} (${char.role}): ${char.background}\n`;
-        });
-        contextStr += '\n';
-      }
-      contextStr += '----------------------\n\n';
-
+      const characterContext = buildCharacterContext();
+      const worldContext = buildWorldContext();
       const currentText = editor.getText();
-      let promptText = '';
+      const chapterSummary = getChapterSummary();
+
+      // Prepare previous chapter text (8000 chars max)
+      let previousChapterText = '';
+      if (previousChapterTitle && previousChapterContent) {
+        const div = document.createElement('div');
+        div.innerHTML = previousChapterContent;
+        const plainText = div.innerText || div.textContent || '';
+        const cleanText = plainText
+          .replace(/Ringkasan Plot Bab:/g, '')
+          .replace(/Mulai ceritamu di sini\.\.\./g, '')
+          .trim();
+
+        if (cleanText.length > 10) {
+          if (cleanText.length > 8000) {
+            previousChapterText = cleanText.substring(0, 4000) +
+              `\n\n[...${cleanText.length - 8000} karakter dilewati...]\n\n` +
+              cleanText.substring(cleanText.length - 4000);
+          } else {
+            previousChapterText = cleanText;
+          }
+        }
+      }
 
       if (promptType === 'continue') {
-         // Parse ringkasan dari Outliner
-         const currentContent = editor.getHTML();
-         const tempDivParse = document.createElement('div');
-         tempDivParse.innerHTML = currentContent;
-         let chapterSummary = '';
-         const allH2 = tempDivParse.querySelectorAll('h2');
-         allH2.forEach(h2 => {
-           if (h2.textContent?.includes('Ringkasan Plot')) {
-             const next = h2.nextElementSibling;
-             if (next) chapterSummary = next.textContent || '';
-           }
-         });
+        const masterSystemPrompt = `Anda adalah seorang AI Asisten Penulis Novel Profesional dan Co-Writer handal. Tugas Anda adalah membantu menulis, melanjutkan, dan memoles cerita secara organik dengan standar sastra yang tinggi.
 
-         let previousChContext = '';
-         if (previousChapterTitle && previousChapterContent) {
-           const tempDiv = document.createElement('div');
-           tempDiv.innerHTML = previousChapterContent;
-           const plainTextPrev = tempDiv.innerText || tempDiv.textContent || '';
-           
-           const cleanPrev = plainTextPrev
-             .replace(/Ringkasan Plot Bab:/g, '')
-             .replace(/Mulai ceritamu di sini\.\.\./g, '')
-             .trim();
+[PRINSIP UTAMA PENULISAN]
+1. GAYA "SHOW, DON'T TELL": Jangan sekadar menyebutkan emosi karakter secara literal (misal: "Dia sedang sedih"). Tunjukkan emosi tersebut melalui bahasa tubuh, ekspresi wajah, tindakan fisik, perubahan nada suara, atau reaksi fisiologis secara mendalam dan deskriptif.
+2. DIALOG ORGANIK: Tulis dialog yang terdengar natural bagi manusia. Hindari dialog yang terlalu kaku, ekspositori (menjelaskan plot lewat obrolan secara dipaksakan), atau terdengar formal seperti teks akademis.
+3. BEBAS KLISE & METAFORA SEGAR: Hindari frasa transisi atau kiasan klise (contoh: "Waktu berlalu begitu cepat", "Matahari terbit memberikan secercah harapan"). Gunakan deskripsi latar suasana dan analogi yang unik serta segar.
+4. PROGRESI PROSA: Tulis cerita dengan alur yang mengalir lancar. Jangan terburu-buru menyelesaikan adegan atau konflik dalam satu-dua paragraf. Berikan ruang bagi ketegangan dan atmosfer cerita untuk berkembang.
+5. TANPA RINGKASAN: Jangan pernah memberikan kesimpulan, moral cerita, atau ringkasan plot di akhir teks buatan Anda. Berhentilah menulis tepat pada kalimat cerita terakhir secara natural.
 
-           if (cleanPrev.length > 10) {
-              const MAX_PREV = 8000;
-              let sampleText = cleanPrev;
-              if (cleanPrev.length > MAX_PREV) {
-                const head = cleanPrev.substring(0, 4000);
-                const tail = cleanPrev.substring(cleanPrev.length - 4000);
-                sampleText = `${head}\n\n[...${cleanPrev.length - 8000} karakter dilewati...]\n\n${tail}`;
-              }
-             previousChContext = `--- ISI BAB SEBELUMNYA: ${previousChapterTitle} ---\n${sampleText}\n-------------------------------------------------\n\n`;
-           }
-         }
+[KONSISTENSI KARAKTER & PETA HUBUNGAN]
+Anda wajib patuh pada detail karakter yang terlibat di bawah ini. Jaga agar tindakan, cara berbicara, dan keputusan mereka tetap konsisten dengan kepribadian dan dinamika hubungan mereka:
+${characterContext}
 
-         const activeChHeader = currentChapterTitle 
-           ? `--- BAB SAAT INI YANG SEDANG DITULIS: ${currentChapterTitle} ---\n\n` 
-           : '';
+[STRUKTUR & KONTEKS ACUAN]
+Gunakan potongan teks bab sebelumnya dan teks aktif saat ini sebagai fondasi kontinuitas agar tidak terjadi lubang plot (plot hole) atau perubahan suasana yang mendadak:
+- Ringkasan Plot Bab Ini: ${chapterSummary || 'Tidak ada ringkasan plot khusus.'}
+- Akhir Bab Sebelumnya: ${previousChapterText || 'Tidak ada bab sebelumnya.'}
+- Teks Aktif Saat Ini (Gunakan teks ini sebagai pijakan melompat): ${currentText}
 
-         promptText = `${chapterSummary ? `[RENCANA BAB INI]: ${chapterSummary}\n\n` : ''}${contextStr}${previousChContext}${activeChHeader}Kamu adalah seorang novelis/sastrawan Indonesia kontemporer berbakat besar. Gaya menulismu sangat organik, hidup, realistis, dan emosional, sangat jauh dari gaya tulisan AI yang klise, kaku, atau seragam.
+[TUGAS ANDA]
+Lanjutkan cerita di atas sebanyak 2-3 paragraf berikutnya. Langsung mulai dari kelanjutan kalimat/paragraf terakhir dari "Teks Aktif Saat Ini" tanpa menulis ulang teks yang sudah ada, tanpa salam pembuka, dan tanpa tanda kutip pembungkus cerita. Tulis kelanjutan cerita secara organik dan mengalir.`;
 
-Berdasarkan konteks dunia, karakter, dan cerita yang sudah ada di bawah, lanjutkan cerita untuk "${currentChapterTitle || 'Bab Aktif'}" dengan mematuhi aturan penulisan manusia berikut secara MUTLAK:
+        const aiResult = await generateAIContent(
+          [{ role: 'user', text: 'Lanjutkan cerita berdasarkan konteks yang diberikan.' }],
+          0.7,
+          masterSystemPrompt
+        );
 
-1. **Prinsip "Show, Don't Tell" (Tunjukkan, Jangan Beritahu)**:
-   Jangan menulis kesimpulan abstrak (misal: "Dia merasa sangat sedih" atau "suasana mencekam"). Tunjukkan suasana, emosi, atau ketegangan melalui detail fisik, sensorik (suara, bau, suhu, sentuhan), tindakan karakter, atau reaksi tubuh nyata (misal: genggaman tangan mengencang, nafas tercekat, suara langkah kaki di kayu rapuk).
-
-2. **DILARANG MENGGUNAKAN KATA & TRANSISI KLISE AI**:
-   - Jangan pernah memulai paragraf dengan kata transisi malas seperti "Malam itu", "Sementara itu", "Tiba-tiba", "Namun", "Di balik dinding...", "Senja mulai...", atau sejenisnya.
-   - Hindari metafora klise seperti "senyuman misterius", "mata yang berapi-api", "langit seolah menangisi", "jantung yang berdegup kencang seperti genderang perang". Gunakan analogi yang segar, sederhana, jujur, dan tidak pasaran.
-
-3. **Gaya Bahasa Organik & Variasi Kalimat**:
-   - Tulis dengan kombinasi kalimat pendek yang dinamis (untuk ketegangan/aksi) dan kalimat panjang yang mengalir (untuk deskripsi). Jangan buat semua kalimat memiliki panjang yang sama.
-   - Gunakan dialog yang terdengar natural saat diucapkan manusia asli secara langsung, bukan dialog formal seperti buku pelajaran. Gunakan subteks (karakter tidak selalu mengatakan apa yang mereka rasakan secara langsung).
-
-4. **Haram Hukumnya Membuat Paragraf Kesimpulan/Refleksi**:
-   AI sering sekali mengakhiri tulisan dengan paragraf atau kalimat filosofis klise yang merangkum masa depan atau makna perjuangan (misal: "Mereka tahu malam ini baru permulaan dari perjuangan panjang..."). HAPUS kebiasaan ini! Akhiri adegan ini secara menggantung alami di tengah-tengah ketegangan atau aksi, tanpa rangkuman moral apapun.
-
-5. **Dilarang Melompat Bab**:
-   Jangan buat judul bab baru, jangan tulis tanda pemisah bab, dan jangan melompat menulis bab lain (seperti menulis '**Bab 5**', '**Bab 6**', dll). Fokus melanjutkan adegan aktif dari baris terakhir cerita saat ini.
-
-Tulis kelanjutan cerita sebanyak 2-3 paragraf saja yang menyatu secara sempurna dari cerita di bawah ini:
-
-Cerita saat ini:
-${currentText}`;
-      } else if (promptType === 'improve') {
-         promptText = `Kamu adalah editor novel profesional. Perbaiki gaya bahasa dari cerita berikut agar terasa ditulis oleh sastrawan manusia yang sangat berbakat, bukan oleh AI kaku.
-
-ATURAN PERBAIKAN:
-1. Terapkan prinsip "Show, Don't Tell" secara mendalam. Ubah deskripsi emosi abstrak menjadi aksi fisik atau detail sensorik.
-2. Hapus semua transisi klise khas AI (seperti "Malam itu", "Sementara itu", "Tiba-tiba") dan ubah menjadi alur adegan yang mengalir alami.
-3. Buat dialog terasa lebih hidup, tidak kaku, dan realistis seperti cara orang Indonesia berbicara sehari-hari.
-4. Pertahankan plot dan inti cerita aslinya, namun poles diksi (pilihan kata) agar lebih kaya, tidak repetitif, dan memiliki jiwa.
-5. Hapus semua paragraf kesimpulan moralistik atau kalimat filosofis klise di akhir cerita jika ada.
-
-Teks yang akan diperbaiki:
-\n\n${currentText}`;
-      } else if (promptType === 'idea') {
-         promptText = `${contextStr}Berdasarkan cerita berikut dan aturan dunia di atas, berikan 3 ide konflik atau plot twist yang bisa terjadi selanjutnya yang orisinal, mengejutkan, dan tidak klise seperti pola cerita AI standard:\n\n${currentText}`;
-      }
-
-      const temps: Record<string, number> = { continue: 0.4, improve: 0.3, idea: 0.85 };
-      const aiResult = await generateAIContent([{ role: 'user', text: promptText }], temps[promptType] ?? 0.7);
-
-      if (promptType === 'idea') {
-        alert(aiResult); 
-        setIsGenerating(false);
-      } else {
-        // Efek Mengetik Seperti Manusia (Typewriter Effect)
         let index = 0;
-        editor.commands.insertContent('\n\n'); // Sisipkan baris baru awal
+        editor.commands.insertContent('\n\n');
 
         const typeNextChar = () => {
           if (index < aiResult.length) {
-            const char = aiResult[index];
-            editor.commands.insertContent(char);
+            editor.commands.insertContent(aiResult[index]);
             index++;
-            
-            // Kecepatan mengetik dinamis (10ms - 35ms) agar terlihat seperti manusia asli mengetik
             const delay = Math.random() * 25 + 10;
             typingTimeoutRef.current = setTimeout(typeNextChar, delay);
           } else {
             setIsGenerating(false);
           }
         };
-
         typeNextChar();
+
+      } else if (promptType === 'improve') {
+        const systemPrompt = `Anda adalah editor novel profesional. Perbaiki gaya bahasa dari cerita berikut agar terasa ditulis oleh sastrawan manusia yang sangat berbakat, bukan oleh AI kaku.
+
+ATURAN PERBAIKAN:
+1. Terapkan prinsip "Show, Don't Tell" secara mendalam. Ubah deskripsi emosi abstrak menjadi aksi fisik atau detail sensorik.
+2. Hapus semua transisi klise khas AI dan ubah menjadi alur adegan yang mengalir alami.
+3. Buat dialog terasa lebih hidup, tidak kaku, dan realistis seperti cara orang Indonesia berbicara sehari-hari.
+4. Pertahankan plot dan inti cerita aslinya, namun poles diksi agar lebih kaya, tidak repetitif, dan memiliki jiwa.
+5. Hapus semua paragraf kesimpulan moralistik atau kalimat filosofis klise di akhir cerita jika ada.`;
+
+        const aiResult = await generateAIContent(
+          [{ role: 'user', text: `Teks yang akan diperbaiki:\n\n${currentText}` }],
+          0.3,
+          systemPrompt
+        );
+
+        let index = 0;
+        editor.commands.setContent('');
+
+        const typeNextChar = () => {
+          if (index < aiResult.length) {
+            editor.commands.insertContent(aiResult[index]);
+            index++;
+            const delay = Math.random() * 15 + 5;
+            typingTimeoutRef.current = setTimeout(typeNextChar, delay);
+          } else {
+            setIsGenerating(false);
+          }
+        };
+        typeNextChar();
+
+      } else if (promptType === 'idea') {
+        const systemPrompt = `Anda adalah seorang kreator cerita yang jenius dan out-of-the-box. Berdasarkan konteks dunia, karakter, dan cerita yang ada, berikan 3 ide konflik atau plot twist orisinal yang mengejutkan dan tidak klise.
+
+${worldContext ? `${worldContext}\n` : ''}${characterContext}`;
+
+        const aiResult = await generateAIContent(
+          [{ role: 'user', text: `Berdasarkan cerita berikut, berikan 3 ide konflik atau plot twist yang bisa terjadi selanjutnya:\n\n${currentText}` }],
+          0.85,
+          systemPrompt
+        );
+
+        alert(aiResult);
+        setIsGenerating(false);
       }
     } catch (error: any) {
       console.error(error);
