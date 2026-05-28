@@ -56,10 +56,8 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
 
   // Hierarchical Nodes State
-  const [nodes, setNodes] = useState<StoryNode[]>([
-    { id: 'ch-1', title: 'Bab 1', type: 'chapter', parentId: null, content: '' }
-  ]);
-  const [activeChapterId, setActiveChapterId] = useState<string>('ch-1');
+  const [nodes, setNodes] = useState<StoryNode[]>([]);
+  const [activeChapterId, setActiveChapterId] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [novelMeta, setNovelMeta] = useState<NovelMeta | null>(() => {
     try {
@@ -224,7 +222,7 @@ export default function App() {
       const chapterCount = nodes.filter(n => n.type === 'chapter').length;
       const newChapter: StoryNode = { 
         id: newId, 
-        title: `Bab ${chapterCount + 1}`, 
+        title: `Bab ${chapterCount + 1}: Bab Baru`, 
         type: 'chapter',
         parentId: parentId,
         content: '' 
@@ -556,15 +554,17 @@ export default function App() {
     };
 
     if (editor) {
-      const updatedNodes = nodes.map(n => 
-        n.id === activeChapterId ? { ...n, content: editor.getHTML() } : n
-      );
-      const finalNodes = [...updatedNodes, firstChapter];
+      const existingChapters = nodes.filter(n => n.type === 'chapter');
+      const existingContent = editor.getHTML();
+      let baseNodes = existingChapters.length > 0
+        ? nodes.map(n => n.id === activeChapterId ? { ...n, content: existingContent } : n)
+        : nodes;
+      const finalNodes = [...baseNodes, firstChapter];
       setNodes(finalNodes);
       localStorage.setItem('fictify-nodes', JSON.stringify(finalNodes));
       setActiveChapterId(newId);
       setActiveTab('chapter');
-      showToast(`Plot ${plotInduk.length} bab berhasil dibuat! Mulai menulis Bab 1.`);
+      showToast(`Plot ${numberedPlotInduk.length} bab berhasil dibuat! Mulai menulis Bab 1.`);
     }
   };
 
@@ -786,7 +786,11 @@ export default function App() {
     if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
     const numA = parseInt(a.title.match(/Bab\s*(\d+)/i)?.[1] || '0');
     const numB = parseInt(b.title.match(/Bab\s*(\d+)/i)?.[1] || '0');
-    if (numA && numB) return numA - numB;
+    const hasNumA = a.title.match(/Bab\s*(\d+)/i);
+    const hasNumB = b.title.match(/Bab\s*(\d+)/i);
+    if (hasNumA && hasNumB) return numA - numB;
+    if (hasNumA && !hasNumB) return 1;
+    if (!hasNumA && hasNumB) return -1;
     return a.title.localeCompare(b.title);
   };
 
