@@ -1,4 +1,4 @@
-import { generateAIContent } from './ai';
+import { generateAIContent, sanitizeJSONResponse } from './ai';
 
 export interface PlotBab {
   title: string;
@@ -73,24 +73,30 @@ export async function generatePlotOutline(premise: string, targetBabCount: numbe
 
 ${worldContext ? `${worldContext}\n` : ''}${characterContext ? `${characterContext}\n` : ''}
 
-[FORMAT OUTPUT]
-RESPON WAJIB BERUPA JSON ARRAY TANPA markdown backticks, dengan format:
+[FORMAT OUTPUT - PERINGATAN KERAS]
+Anda WAJIB mengikuti aturan berikut dengan TEPAT:
+1. RESPON ANDA HANYA BOLEH BERUPA JSON ARRAY. TIDAK BOLEH ADA teks pembuka seperti "Berikut adalah...", "Tentu...", "Baik...", "Ini plotnya..." atau apapun.
+2. JANGAN GUNAKAN markdown backticks (\`\`\`json atau \`\`\`).
+3. Output Anda harus DIMULAI LANGSUNG dengan tanda kurung siku "[" dan DIAKHIRI dengan tanda kurung siku tutup "]".
+4. SETIAP objek dalam array HARUS memiliki key "title" (string) dan "summary" (string).
+5. Buatkan TEPAT ${targetBabCount} objek dalam array — tidak kurang, tidak lebih.
+
+Contoh output yang BENAR:
 [
   {
     "title": "Judul Bab yang Menarik",
     "summary": "Ringkasan naratif 2-3 kalimat tentang apa yang terjadi di bab ini, konflik apa yang muncul, dan bagaimana perasaan/perubahan karakter."
   }
-]
-
-Buatkan TEPAT ${targetBabCount} bab — tidak kurang, tidak lebih.`;
+]`;
 
   const reply = await generateAIContent(
     [{ role: 'user', text: `Buatkan kerangka cerita ${targetBabCount} bab berdasarkan premis berikut:\n\nPremis: "${premise}"` }],
-    0.7,
-    systemPrompt
+    0.3,
+    systemPrompt,
+    true
   );
 
-  const cleanedReply = reply.replace(/```json/g, '').replace(/```/g, '').trim();
+  const cleanedReply = sanitizeJSONResponse(reply);
   const parsed = JSON.parse(cleanedReply);
 
   if (!Array.isArray(parsed)) {

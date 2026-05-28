@@ -108,11 +108,42 @@ export async function testAIConnection(
   }
 }
 
+// Pembersih teks JSON dari basa-basi AI
+export function sanitizeJSONResponse(text: string): string {
+  let clean = text.trim();
+
+  // Hapus blok markdown json
+  clean = clean.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+
+  // Cari bracket pertama — buang semua teks sebelum bracket
+  const firstCurly = clean.indexOf('{');
+  const firstSquare = clean.indexOf('[');
+
+  if (firstCurly === -1 && firstSquare === -1) {
+    throw new Error('AI tidak mengembalikan JSON yang valid. Respon: ' + text.slice(0, 200));
+  }
+
+  if (firstSquare !== -1 && (firstCurly === -1 || firstSquare < firstCurly)) {
+    clean = clean.slice(firstSquare);
+    // Pastikan array-nya utuh — potong setelah ] terakhir
+    const lastSquare = clean.lastIndexOf(']');
+    if (lastSquare !== -1) clean = clean.slice(0, lastSquare + 1);
+  } else {
+    clean = clean.slice(firstCurly);
+    // Pastikan objek-nya utuh — potong setelah } terakhir
+    const lastCurly = clean.lastIndexOf('}');
+    if (lastCurly !== -1) clean = clean.slice(0, lastCurly + 1);
+  }
+
+  return clean.trim();
+}
+
 // Panggilan utama untuk menghasilkan konten AI
 export async function generateAIContent(
   messages: AIMessage[],
   temperature: number = 0.7,
-  systemInstruction?: string
+  systemInstruction?: string,
+  jsonMode: boolean = false
 ): Promise<string> {
   const { provider, apiKey, model } = getAISettings();
 
@@ -135,6 +166,10 @@ export async function generateAIContent(
         generationConfig: { temperature }
       };
 
+      if (jsonMode) {
+        body.generationConfig.response_mime_type = 'application/json';
+      }
+
       if (systemInstruction) {
         body.systemInstruction = {
           parts: [{ text: systemInstruction }]
@@ -155,6 +190,11 @@ export async function generateAIContent(
       const data = await response.json();
       const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!reply) throw new Error('API Gemini tidak mengembalikan konten teks.');
+
+      if (jsonMode) {
+        // Gemini JSON mode tetap return string JSON — kita sanitize
+        return sanitizeJSONResponse(reply);
+      }
       return reply;
     } else {
       const endpoint = getProviderEndpoint(provider);
@@ -179,14 +219,20 @@ export async function generateAIContent(
         content: msg.text
       })));
 
+      const requestBody: Record<string, any> = {
+        model: model,
+        messages: payloadMessages,
+        temperature
+      };
+
+      if (jsonMode && (provider === 'openai' || provider === 'deepseek' || provider === 'groq')) {
+        requestBody.response_format = { type: 'json_object' };
+      }
+
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({
-          model: model,
-          messages: payloadMessages,
-          temperature
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
@@ -197,6 +243,10 @@ export async function generateAIContent(
       const data = await response.json();
       const reply = data.choices?.[0]?.message?.content;
       if (!reply) throw new Error('API tidak mengembalikan konten teks.');
+
+      if (jsonMode) {
+        return sanitizeJSONResponse(reply);
+      }
       return reply;
     }
   } catch (error: any) {
