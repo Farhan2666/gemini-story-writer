@@ -314,6 +314,21 @@ export default function App() {
         const remainingChapters = updated.filter(n => n.type === 'chapter');
         setActiveChapterId(remainingChapters[0].id);
       }
+
+      // Re-count AI-generated chapters dan update novelMeta
+      if (novelMeta) {
+        const remainingGenChapters = updated.filter(n => n.type === 'chapter' && n.id.startsWith('ch-gen-')).length;
+        const chapterSummaries = { ...novelMeta.chapterSummaries };
+        idsToDelete.forEach(delId => delete chapterSummaries[delId]);
+        const updatedMeta: NovelMeta = {
+          ...novelMeta,
+          generatedBabCount: remainingGenChapters,
+          chapterSummaries,
+          isComplete: remainingGenChapters >= novelMeta.targetBabCount,
+        };
+        saveNovelMeta(updatedMeta);
+      }
+
       showToast(isChapter ? "Bab dihapus" : "Folder dihapus");
     }
   };
