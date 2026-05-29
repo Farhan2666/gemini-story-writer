@@ -528,10 +528,13 @@ export default function App() {
   };
 
   const handlePlotGenerated = (premise: string, plotInduk: PlotBab[]) => {
-    const numberedPlotInduk = plotInduk.map((plot, i) => ({
-      title: `Bab ${i + 1}: ${plot.title}`,
-      summary: plot.summary,
-    }));
+    const numberedPlotInduk = plotInduk.map((plot, i) => {
+      const alreadyNumbered = /^Bab\s*\d+:/i.test(plot.title);
+      return {
+        title: alreadyNumbered ? plot.title : `Bab ${i + 1}: ${plot.title}`,
+        summary: plot.summary,
+      };
+    });
 
     const meta: NovelMeta = {
       premise,
@@ -568,24 +571,6 @@ export default function App() {
     }
   };
 
-  const getPreviousChapterForGeneration = (): { id: string; title: string; content: string } | null => {
-    const list: { id: string; title: string; content: string }[] = [];
-    const traverse = (parentId: string | null) => {
-      const levelNodes = nodes.filter(n => n.parentId === parentId);
-      const sorted = [...levelNodes].sort(sortChapters);
-      sorted.forEach(node => {
-        if (node.type === 'folder') {
-          traverse(node.id);
-        } else {
-          list.push({ id: node.id, title: node.title, content: node.content || '' });
-        }
-      });
-    };
-    traverse(null);
-    const activeIndex = list.findIndex(ch => ch.id === activeChapterId);
-    return activeIndex > 0 ? list[activeIndex - 1] : null;
-  };
-
   const generateNextChapter = async () => {
     if (!novelMeta || !editor) return;
 
@@ -599,11 +584,11 @@ export default function App() {
     setIsGenerating(true);
 
     try {
-      const prevChapter = getPreviousChapterForGeneration();
+      const activeChapter = nodes.find(n => n.id === activeChapterId && n.type === 'chapter');
       const content = await generateChapterContent(
         novelMeta,
         currentChapterIndex,
-        prevChapter?.content,
+        activeChapter?.content,
       );
 
       const newId = `ch-gen-${Date.now()}-${currentChapterIndex}`;

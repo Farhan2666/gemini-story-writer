@@ -94,13 +94,18 @@ Anda WAJIB mengikuti aturan berikut dengan TEPAT:
 2. JANGAN GUNAKAN markdown backticks (\`\`\`json atau \`\`\`).
 3. Output Anda harus DIMULAI LANGSUNG dengan tanda kurung siku "[" dan DIAKHIRI dengan tanda kurung siku tutup "]".
 4. SETIAP objek dalam array HARUS memiliki key "title" (string) dan "summary" (string).
-5. Buatkan TEPAT ${targetBabCount} objek dalam array — tidak kurang, tidak lebih.
+5. Untuk properti "title", WAJIB menyertakan nomor bab di depannya dengan format "Bab X: [Judul]". Contoh: "Bab 1: Permulaan yang Baru", "Bab 2: Rahasia Terungkap".
+6. Buatkan TEPAT ${targetBabCount} objek dalam array — tidak kurang, tidak lebih.
 
 Contoh output yang BENAR:
 [
   {
-    "title": "Judul Bab yang Menarik",
+    "title": "Bab 1: Permulaan yang Baru",
     "summary": "Ringkasan naratif 2-3 kalimat tentang apa yang terjadi di bab ini, konflik apa yang muncul, dan bagaimana perasaan/perubahan karakter."
+  },
+  {
+    "title": "Bab 2: Rahasia Terungkap",
+    "summary": "Ringkasan naratif 2-3 kalimat tentang apa yang terjadi di bab ini..."
   }
 ]`;
 
