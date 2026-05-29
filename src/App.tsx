@@ -606,10 +606,19 @@ export default function App() {
   };
 
   const generateNextChapter = async () => {
-    if (!novelMeta || !editor) return;
+    if (!editor) return;
 
-    const currentChapterIndex = novelMeta.generatedBabCount;
-    if (currentChapterIndex >= novelMeta.targetBabCount) {
+    // Baca fresh dari localStorage — hindari stale closure dari deleteNode
+    const freshMeta: NovelMeta | null = (() => {
+      try {
+        const saved = localStorage.getItem('fictify-novel-meta');
+        return saved ? JSON.parse(saved) : null;
+      } catch { return null; }
+    })();
+    if (!freshMeta) return;
+
+    const currentChapterIndex = freshMeta.generatedBabCount;
+    if (currentChapterIndex >= freshMeta.targetBabCount) {
       showToast('Semua bab sudah selesai dibuat!');
       return;
     }
@@ -621,7 +630,7 @@ export default function App() {
       const freshNodes: StoryNode[] = JSON.parse(localStorage.getItem('fictify-nodes') || '[]');
       const activeChapter = freshNodes.find(n => n.id === activeChapterId && n.type === 'chapter');
       const content = await generateChapterContent(
-        novelMeta,
+        freshMeta,
         currentChapterIndex,
         activeChapter?.content,
       );
@@ -629,32 +638,33 @@ export default function App() {
       const newId = `ch-gen-${Date.now()}-${currentChapterIndex}`;
       const newChapter: StoryNode = {
         id: newId,
-        title: novelMeta.plotInduk[currentChapterIndex].title,
+        title: freshMeta.plotInduk[currentChapterIndex].title,
         type: 'chapter',
         parentId: null,
         content,
       };
-      const updatedNodes = [...nodes, newChapter];
+      const updatedNodes = [...freshNodes, newChapter];
       setNodes(updatedNodes);
       localStorage.setItem('fictify-nodes', JSON.stringify(updatedNodes));
       setActiveChapterId(newId);
 
       const [summary, loreTracking] = await Promise.all([
         summarizeChapterContent(content),
-        extractLoreTracking(content, novelMeta.loreTracking),
+        extractLoreTracking(content, freshMeta.loreTracking),
       ]);
       const updatedMeta: NovelMeta = {
-        ...novelMeta,
+        ...freshMeta,
         generatedBabCount: currentChapterIndex + 1,
         loreTracking,
         chapterSummaries: {
-          ...novelMeta.chapterSummaries,
+          ...freshMeta.chapterSummaries,
           [newId]: summary,
         },
-        isComplete: currentChapterIndex + 1 >= novelMeta.targetBabCount,
+        isComplete: currentChapterIndex + 1 >= freshMeta.targetBabCount,
       };
       saveNovelMeta(updatedMeta);
-      showToast(`Bab ${currentChapterIndex + 1} dari ${novelMeta.targetBabCount} berhasil dibuat!`);
+      setNovelMeta(updatedMeta); // sync React state
+      showToast(`Bab ${currentChapterIndex + 1} dari ${freshMeta.targetBabCount} berhasil dibuat!`);
     } catch (error: any) {
       console.error(error);
       alert('Gagal membuat bab: ' + error.message);
