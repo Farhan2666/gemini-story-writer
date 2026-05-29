@@ -108,6 +108,28 @@ export async function testAIConnection(
   }
 }
 
+function findMatchingClose(text: string, openIdx: number, open: string, close: string): number {
+  if (openIdx < 0) return -1;
+  let depth = 0;
+  let inString = false;
+  let stringChar = '';
+  for (let i = openIdx; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (ch === '\\') { i++; continue; }
+      if (ch === stringChar) inString = false;
+      continue;
+    }
+    if (ch === '"' || ch === "'") { inString = true; stringChar = ch; continue; }
+    if (ch === open) { depth++; continue; }
+    if (ch === close) {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
 // Pembersih teks JSON dari basa-basi AI
 export function sanitizeJSONResponse(text: string): string {
   let clean = text.trim();
@@ -125,14 +147,12 @@ export function sanitizeJSONResponse(text: string): string {
 
   if (firstSquare !== -1 && (firstCurly === -1 || firstSquare < firstCurly)) {
     clean = clean.slice(firstSquare);
-    // Pastikan array-nya utuh — potong setelah ] terakhir
-    const lastSquare = clean.lastIndexOf(']');
-    if (lastSquare !== -1) clean = clean.slice(0, lastSquare + 1);
+    const closeIdx = findMatchingClose(clean, 0, '[', ']');
+    if (closeIdx !== -1) clean = clean.slice(0, closeIdx + 1);
   } else {
     clean = clean.slice(firstCurly);
-    // Pastikan objek-nya utuh — potong setelah } terakhir
-    const lastCurly = clean.lastIndexOf('}');
-    if (lastCurly !== -1) clean = clean.slice(0, lastCurly + 1);
+    const closeIdx = findMatchingClose(clean, 0, '{', '}');
+    if (closeIdx !== -1) clean = clean.slice(0, closeIdx + 1);
   }
 
   return clean.trim();

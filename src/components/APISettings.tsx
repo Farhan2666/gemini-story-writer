@@ -352,13 +352,13 @@ export default function APISettings({ isOpen, onClose, onSaveNotify }: APISettin
               )}
               {testStatus === 'success' && (
                 <div className="flex items-center gap-2.5 text-xs text-emerald-400 bg-emerald-950/10 border border-emerald-500/20 px-4 py-3 rounded-xl shadow-lg shadow-emerald-500/5 animate-pulse">
-                  <Check className="w-4.5 h-4.5 text-emerald-400" />
+                  <Check className="w-5 h-5 text-emerald-400" />
                   <span className="font-bold">Koneksi Berhasil! Kunci API Anda berfungsi sempurna.</span>
                 </div>
               )}
               {testStatus === 'error' && (
                 <div className="flex items-start gap-2.5 text-xs text-red-400 bg-red-950/10 border border-red-500/20 px-4 py-3 rounded-xl">
-                  <AlertCircle className="w-4.5 h-4.5 text-red-400 shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
                   <div>
                     <span className="font-bold block">Koneksi Gagal!</span>
                     <span className="text-[11px] text-red-300/90 leading-tight block mt-0.5">{testErrorMessage}</span>

@@ -1,6 +1,7 @@
 import { Wand2, Play } from 'lucide-react';
 import { Editor } from '@tiptap/react';
 import { generateAIContent } from '../utils/ai';
+import { buildCharacterContext, buildWorldContext } from '../utils/novelGenerator';
 import { useRef, useEffect } from 'react';
 
 interface AIPanelProps {
@@ -29,49 +30,6 @@ export default function AIPanel({
       }
     };
   }, []);
-
-  const buildCharacterContext = (): string => {
-    const savedChars = localStorage.getItem('fictify-characters');
-    const savedRels = localStorage.getItem('fictify-relationships');
-    let result = '';
-
-    if (savedChars) {
-      const chars = JSON.parse(savedChars);
-      result += 'DAFTAR KARAKTER:\n';
-      chars.forEach((char: any) => {
-        result += `- ${char.name} (${char.role || 'Figuran'}): ${char.background || 'Tidak ada deskripsi.'}\n`;
-      });
-
-      if (savedRels) {
-        const rels = JSON.parse(savedRels);
-        const activeRels = rels.filter((r: any) =>
-          chars.some((c: any) => c.id === r.fromId) && chars.some((c: any) => c.id === r.toId)
-        );
-        if (activeRels.length > 0) {
-          result += '\nHUBUNGAN ANTAR KARAKTER:\n';
-          activeRels.forEach((r: any) => {
-            const from = chars.find((c: any) => c.id === r.fromId);
-            const to = chars.find((c: any) => c.id === r.toId);
-            if (from && to) {
-              result += `- ${from.name} ↔ ${to.name}: ${r.type}\n`;
-            }
-          });
-        }
-      }
-    }
-    return result;
-  };
-
-  const buildWorldContext = (): string => {
-    const savedWorld = localStorage.getItem('fictify-worldview');
-    if (!savedWorld) return '';
-    const w = JSON.parse(savedWorld);
-    let result = 'ATURAN DUNIA:\n';
-    if (w.magicSystem) result += `- Sistem Kekuatan/Sihir: ${w.magicSystem}\n`;
-    if (w.geography) result += `- Geografi & Lokasi: ${w.geography}\n`;
-    if (w.history) result += `- Sejarah & Faksi: ${w.history}\n`;
-    return result;
-  };
 
   const getChapterSummary = (): string => {
     const html = editor?.getHTML() || '';
@@ -137,9 +95,15 @@ export default function AIPanel({
 
         if (cleanText.length > 10) {
           if (cleanText.length > 8000) {
-            previousChapterText = cleanText.substring(0, 4000) +
-              `\n\n[...${cleanText.length - 8000} karakter dilewati...]\n\n` +
-              cleanText.substring(cleanText.length - 4000);
+            const before = cleanText.substring(0, 8000);
+            const breakPoint = before.lastIndexOf('\n');
+            if (breakPoint > 100) {
+              previousChapterText = before.substring(0, breakPoint) +
+                `\n\n[...${cleanText.length - 8000} karakter...]\n\n`;
+            } else {
+              previousChapterText = before +
+                `\n\n[...${cleanText.length - 8000} karakter...]\n\n`;
+            }
           } else {
             previousChapterText = cleanText;
           }

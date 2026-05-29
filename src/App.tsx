@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -40,7 +40,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'world' | 'character' | 'chapter' | 'chat' | 'notes' | 'outliner' | 'cover' | 'cloud' | 'mindmap'>('chapter');
   const [isZenMode, setIsZenMode] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [wordGoal, setWordGoal] = useState(500);
+  const [wordGoal, setWordGoal] = useState(() => {
+    const saved = localStorage.getItem('fictify-word-goal');
+    return saved ? parseInt(saved) : 500;
+  });
   const [isApiSettingsOpen, setIsApiSettingsOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -147,7 +150,7 @@ export default function App() {
         editor.commands.setContent(activeCh.content || '', { emitUpdate: false });
       }
     }
-  }, [activeChapterId, editor]);
+  }, [activeChapterId, editor, nodes]);
 
   // Sync state with editor changes
   const saveStory = () => {
@@ -169,15 +172,18 @@ export default function App() {
 
   // Automated Simulated Cloud Sync every 30 seconds
   useEffect(() => {
-    if (!user) return;
+    if (!user || novelMeta?.isComplete) return;
     const interval = setInterval(() => {
       triggerCloudSyncDirectly(nodes);
     }, 30000);
     return () => clearInterval(interval);
-  }, [user, nodes, activeChapterId]);
+  }, [user, nodes, activeChapterId, novelMeta?.isComplete]);
+
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const triggerCloudSyncDirectly = (currentNodes: StoryNode[]) => {
     if (!user) return;
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     setSyncStatus('syncing');
 
     const projectData = {
@@ -187,7 +193,10 @@ export default function App() {
       notes: localStorage.getItem('fictify-notes') || ''
     };
 
-    setTimeout(() => {
+    syncTimeoutRef.current = setTimeout(() => {
+      syncTimeoutRef.current = null;
+      if (!user) return;
+
       const savedRevisions = localStorage.getItem(`gemini-cloud-revisions-${user.email}`);
       let currentRevs = [];
       if (savedRevisions) {
@@ -454,28 +463,37 @@ export default function App() {
       try {
         const content = e.target?.result as string;
         const data = JSON.parse(content);
-        
+
         if (data.nodes) {
+          if (!Array.isArray(data.nodes)) {
+            throw new Error('Format file tidak valid: nodes harus berupa array');
+          }
+          if (!data.nodes.every((n: any) => n && typeof n.id === 'string' && typeof n.title === 'string' && (n.type === 'chapter' || n.type === 'folder'))) {
+            throw new Error('Format node tidak valid: setiap node harus memiliki id, title, dan type yang benar');
+          }
           setNodes(data.nodes);
           localStorage.setItem('fictify-nodes', JSON.stringify(data.nodes));
           const firstCh = data.nodes.find((n: any) => n.type === 'chapter');
           if (firstCh) {
             setActiveChapterId(firstCh.id);
-            if (editor) editor.commands.setContent(firstCh.content || '');
+            editor?.commands.setContent(firstCh.content || '');
           }
         } else if (data.chapters) {
+          if (!Array.isArray(data.chapters)) {
+            throw new Error('Format file tidak valid: chapters harus berupa array');
+          }
           // Auto migrate older format
           const migrated: StoryNode[] = data.chapters.map((ch: any) => ({
             id: ch.id,
             title: ch.title,
-            type: 'chapter',
+            type: 'chapter' as const,
             parentId: null,
             content: ch.content
           }));
           setNodes(migrated);
           localStorage.setItem('fictify-nodes', JSON.stringify(migrated));
           setActiveChapterId(migrated[0].id);
-          if (editor) editor.commands.setContent(migrated[0].content || '');
+          editor?.commands.setContent(migrated[0].content || '');
         }
 
         if (data.characters) localStorage.setItem('fictify-characters', JSON.stringify(data.characters));
@@ -584,7 +602,8 @@ export default function App() {
     setIsGenerating(true);
 
     try {
-      const activeChapter = nodes.find(n => n.id === activeChapterId && n.type === 'chapter');
+      const freshNodes: StoryNode[] = JSON.parse(localStorage.getItem('fictify-nodes') || '[]');
+      const activeChapter = freshNodes.find(n => n.id === activeChapterId && n.type === 'chapter');
       const content = await generateChapterContent(
         novelMeta,
         currentChapterIndex,
@@ -722,7 +741,7 @@ export default function App() {
                  </span>
                </div>
                <div className="flex gap-2">
-                 {novelMeta && !novelMeta.isComplete && novelMeta.generatedBabCount < novelMeta.targetBabCount && (
+                  {!novelMeta.isComplete && novelMeta.generatedBabCount < novelMeta.targetBabCount && (
                    <button
                      onClick={generateNextChapter}
                      disabled={isGenerating}
@@ -736,10 +755,10 @@ export default function App() {
                      {isGenerating ? 'Menulis...' : 'Generate Bab Selanjutnya'}
                    </button>
                  )}
-                 {novelMeta && !novelMeta.isComplete && (
-                   <button
-                     onClick={handleTamatkanCerita}
-                     disabled={isGenerating}
+                  {!novelMeta.isComplete && (
+                    <button
+                      onClick={handleTamatkanCerita}
+                      disabled={isGenerating}
                      className="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold border border-gray-700 transition-all cursor-pointer disabled:opacity-50"
                    >
                      Tamatkan Cerita
@@ -769,14 +788,12 @@ export default function App() {
   // Recursive Sidebar Tree Nodes renderer
   const sortChapters = (a: StoryNode, b: StoryNode) => {
     if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
-    const numA = parseInt(a.title.match(/Bab\s*(\d+)/i)?.[1] || '0');
-    const numB = parseInt(b.title.match(/Bab\s*(\d+)/i)?.[1] || '0');
-    const hasNumA = a.title.match(/Bab\s*(\d+)/i);
-    const hasNumB = b.title.match(/Bab\s*(\d+)/i);
-    if (hasNumA && hasNumB) return numA - numB;
-    if (hasNumA && !hasNumB) return 1;
-    if (!hasNumA && hasNumB) return -1;
-    return a.title.localeCompare(b.title);
+    const matchA = a.title.match(/Bab\s*(\d+)/i);
+    const matchB = b.title.match(/Bab\s*(\d+)/i);
+    if (!matchA && !matchB) return a.title.localeCompare(b.title);
+    if (!matchA) return 1;
+    if (!matchB) return -1;
+    return parseInt(matchA[1]) - parseInt(matchB[1]);
   };
 
   const renderTreeNodes = (parentId: string | null, depth = 0) => {
@@ -928,7 +945,7 @@ export default function App() {
           <div className="flex-1 overflow-y-auto flex flex-col">
             <div className="p-4 border-b border-gray-900 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Feather className="w-5.5 h-5.5 text-purple-500 shrink-0" />
+                <Feather className="w-6 h-6 text-purple-500 shrink-0" />
                 <h1 className="text-xl font-bold font-mono">Fictify</h1>
               </div>
               <button
@@ -936,7 +953,7 @@ export default function App() {
                 className="p-1.5 text-gray-500 hover:text-purple-400 hover:bg-gray-900/50 rounded-lg transition-all cursor-pointer"
                 title="Pengaturan Mesin AI"
               >
-                <Cpu className="w-4.5 h-4.5" />
+                <Cpu className="w-5 h-5" />
               </button>
             </div>
             
@@ -1121,6 +1138,7 @@ export default function App() {
                       const parsed = parseInt(newGoalStr);
                       if (!isNaN(parsed) && parsed > 0) {
                         setWordGoal(parsed);
+                        localStorage.setItem('fictify-word-goal', parsed.toString());
                         showToast(`Target menulis harian diubah menjadi ${parsed} kata!`);
                       }
                     }
@@ -1255,9 +1273,10 @@ export default function App() {
       {/* Right AI Panel (Only visible in Editor mode) */}
       {!isZenMode && activeTab === 'chapter' && (() => {
         const getPreviousChapter = (): { title: string; content: string } | null => {
+          const freshNodes: StoryNode[] = JSON.parse(localStorage.getItem('fictify-nodes') || '[]');
           const list: StoryNode[] = [];
           const traverse = (parentId: string | null) => {
-            const levelNodes = nodes.filter(n => n.parentId === parentId);
+            const levelNodes = freshNodes.filter(n => n.parentId === parentId);
             const sorted = [...levelNodes].sort(sortChapters);
             sorted.forEach(node => {
               if (node.type === 'folder') {

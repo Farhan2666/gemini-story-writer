@@ -25,7 +25,7 @@ export interface NovelMeta {
   };
 }
 
-function buildCharacterContext(): string {
+export function buildCharacterContext(): string {
   const savedChars = localStorage.getItem('fictify-characters');
   const savedRels = localStorage.getItem('fictify-relationships');
   let result = '';
@@ -57,7 +57,7 @@ function buildCharacterContext(): string {
   return result;
 }
 
-function buildWorldContext(): string {
+export function buildWorldContext(): string {
   const savedWorld = localStorage.getItem('fictify-worldview');
   if (!savedWorld) return '';
   const w = JSON.parse(savedWorld);
@@ -148,6 +148,9 @@ export async function generateChapterContent(
   const characterContext = buildCharacterContext();
   const worldContext = buildWorldContext();
   const currentPlot = novelMeta.plotInduk[chapterIndex];
+  if (!currentPlot) {
+    throw new Error(`Plot bab index ${chapterIndex} tidak ditemukan. Total plot: ${novelMeta.plotInduk.length}`);
+  }
 
   let previousChaptersSummary = '';
   const summaryEntries = Object.entries(novelMeta.chapterSummaries);
@@ -168,13 +171,30 @@ export async function generateChapterContent(
       .trim();
     if (cleanText.length > 10) {
       if (cleanText.length > 8000) {
-        lastChapterFullText = cleanText.substring(0, 4000) +
-          `\n\n[...${cleanText.length - 8000} karakter...]\n\n` +
-          cleanText.substring(cleanText.length - 4000);
+        // Potong aman di batas paragraf (newline) — bukan di tengah kata
+        const truncLen = 8000;
+        const before = cleanText.substring(0, truncLen);
+        const breakPoint = before.lastIndexOf('\n');
+        if (breakPoint > 100) {
+          lastChapterFullText = before.substring(0, breakPoint) +
+            `\n\n[...${cleanText.length - truncLen} karakter...]\n\n`;
+        } else {
+          lastChapterFullText = before +
+            `\n\n[...${cleanText.length - truncLen} karakter...]\n\n`;
+        }
       } else {
         lastChapterFullText = cleanText;
       }
     }
+  }
+
+  // State Transition: bersihkan konteks berdasarkan plot bab selanjutnya
+  let stateTransitionNote = '';
+  const nextPlotSummary = currentPlot.summary.toLowerCase();
+  const locationWords = ['warung', 'kamar', 'rumah', 'kantor', 'sekolah', 'kafe', 'restoran', 'taman', 'jalan', 'pasar', 'kota', 'desa', 'pantai', 'gunung', 'kendaraan', 'mobil', 'motor', 'bis', 'kereta'];
+  const foundLocations = locationWords.filter(w => nextPlotSummary.includes(w));
+  if (foundLocations.length > 0) {
+    stateTransitionNote = `\n[CATATAN TRANSISI: Bab selanjutnya berlatar di tempat yang mengandung kata "${foundLocations[0]}". Pastikan adegan terakhir di bab sebelumnya ditutup secara alami sebelum pindah ke latar baru. Jangan bawa properti atau suasana dari tempat lama ke tempat baru tanpa transisi yang wajar.]`;
   }
 
   const systemPrompt = `Anda adalah seorang novelis profesional. Tugas Anda adalah menulis isi novel bab demi bab berdasarkan plot outline yang sudah ditentukan.
@@ -185,6 +205,12 @@ export async function generateChapterContent(
 3. BEBAS KLISE: Hindari frasa transisi klise. Gunakan deskripsi yang unik dan segar.
 4. PROGRESI PROSA: Alur mengalir lancar, jangan terburu-buru menyelesaikan adegan.
 5. TANPA RINGKASAN: Jangan beri kesimpulan atau moral di akhir. Berhenti natural.
+
+[ATURAN KETAT KELANCARAN PLOT]
+1. SPASIAL: Jika latar tempat berubah (misal: dari Kamar ke Warung), karakter tidak boleh berinteraksi dengan properti tempat sebelumnya (jangan sebut kusen pintu kamar jika sedang di warung sayur).
+2. BENDA: Lacak benda yang dipegang karakter. Jika di awal adegan karakter membuka laptop, jangan tiba-tiba ganti menjadi HP tanpa ada kalimat transisi (misal: "Early mengunci laptopnya dan mengantongi ponselnya").
+3. AKURASI BUDAYA: Pastikan makanan tradisional digambarkan akurat (Sate lilit menggunakan bumbu dasar rempah/serai, BUKAN bumbu kacang).
+4. TOKOH: Jangan memunculkan tokoh baru secara mendadak (seperti Ibu) tanpa ada perkenalan atau alasan logis di dalam narasi.
 
 [KONTEKS KARAKTER & DUNIA]
 ${characterContext}
@@ -199,7 +225,7 @@ Judul: ${currentPlot.title}
 Sinopsis: ${currentPlot.summary}
 
 ${previousChaptersSummary ? `${previousChaptersSummary}\n` : ''}
-${lastChapterFullText ? `[TEKS PENUH BAB SEBELUMNYA - untuk menyambung gaya bahasa]:\n${lastChapterFullText}` : ''}
+${lastChapterFullText ? `[TEKS PENUH BAB SEBELUMNYA - untuk menyambung gaya bahasa]:\n${lastChapterFullText}${stateTransitionNote}` : ''}
 
 [TUGAS ANDA]
 Tulis isi penuh untuk Bab ${chapterIndex + 1} dengan judul "${currentPlot.title}" berdasarkan sinopsis di atas. Tulis dalam format HTML dengan tag <p> untuk setiap paragraf. Mulai langsung dengan konten cerita, tanpa kata pengantar.`;
