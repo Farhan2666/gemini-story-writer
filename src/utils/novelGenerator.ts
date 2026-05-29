@@ -12,6 +12,17 @@ export interface NovelMeta {
   generatedBabCount: number;
   chapterSummaries: Record<string, string>;
   isComplete: boolean;
+  loreTracking?: {
+    characters: {
+      name: string;
+      traits: string;
+      currentStatus: string;
+    }[];
+    locations: {
+      name: string;
+      description: string;
+    }[];
+  };
 }
 
 function buildCharacterContext(): string {
@@ -179,6 +190,10 @@ export async function generateChapterContent(
 ${characterContext}
 ${worldContext}
 
+${novelMeta.loreTracking ? `[LORETRACKING - Status Karakter & Lokasi Terkini]
+${novelMeta.loreTracking.characters.length > 0 ? `KARAKTER:\n${novelMeta.loreTracking.characters.map(c => `- ${c.name} (${c.traits}): ${c.currentStatus}`).join('\n')}\n` : ''}
+${novelMeta.loreTracking.locations.length > 0 ? `LOKASI:\n${novelMeta.loreTracking.locations.map(l => `- ${l.name}: ${l.description}`).join('\n')}\n` : ''}
+` : ''}
 [PLOT BAB SAAT INI - Bab ${chapterIndex + 1}]
 Judul: ${currentPlot.title}
 Sinopsis: ${currentPlot.summary}
