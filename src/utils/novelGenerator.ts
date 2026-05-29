@@ -197,6 +197,14 @@ export async function generateChapterContent(
     stateTransitionNote = `\n[CATATAN TRANSISI: Bab selanjutnya berlatar di tempat yang mengandung kata "${foundLocations[0]}". Pastikan adegan terakhir di bab sebelumnya ditutup secara alami sebelum pindah ke latar baru. Jangan bawa properti atau suasana dari tempat lama ke tempat baru tanpa transisi yang wajar.]`;
   }
 
+  const loreTrackingSection = novelMeta.loreTracking && (novelMeta.loreTracking.characters.length > 0 || novelMeta.loreTracking.locations.length > 0)
+    ? `[STATUS KARAKTER & LOKASI PALING AKHIR (WAJIB DIPATUHI)]
+${novelMeta.loreTracking.characters.length > 0 ? `Status karakter saat ini:\n${novelMeta.loreTracking.characters.map(c => `- ${c.name}: ${c.currentStatus}`).join('\n')}\n` : ''}
+${novelMeta.loreTracking.locations.length > 0 ? `Deskripsi lokasi:\n${novelMeta.loreTracking.locations.map(l => `- ${l.name}: ${l.description}`).join('\n')}\n` : ''}
+PERINGATAN: Status di atas adalah kondisi PALING AKHIR yang diketahui. JANGAN mengubah status (pekerjaan, lokasi, kondisi) karakter tanpa alasan logis yang dijelaskan di dalam bab ini. Jika tidak ada perubahan, pertahankan status yang tercatat.
+`
+    : '';
+
   const systemPrompt = `Anda adalah seorang novelis profesional. Tugas Anda adalah menulis isi novel bab demi bab berdasarkan plot outline yang sudah ditentukan.
 
 [PRINSIP PENULISAN]
@@ -216,10 +224,7 @@ export async function generateChapterContent(
 ${characterContext}
 ${worldContext}
 
-${novelMeta.loreTracking ? `[LORETRACKING - Status Karakter & Lokasi Terkini]
-${novelMeta.loreTracking.characters.length > 0 ? `KARAKTER:\n${novelMeta.loreTracking.characters.map(c => `- ${c.name} (${c.traits}): ${c.currentStatus}`).join('\n')}\n` : ''}
-${novelMeta.loreTracking.locations.length > 0 ? `LOKASI:\n${novelMeta.loreTracking.locations.map(l => `- ${l.name}: ${l.description}`).join('\n')}\n` : ''}
-` : ''}
+${loreTrackingSection}
 [PLOT BAB SAAT INI - Bab ${chapterIndex + 1}]
 Judul: ${currentPlot.title}
 Sinopsis: ${currentPlot.summary}
@@ -249,4 +254,55 @@ export async function summarizeChapterContent(chapterContent: string): Promise<s
   );
 
   return reply.trim();
+}
+
+export async function extractLoreTracking(
+  chapterContent: string,
+  previousLoreTracking?: NovelMeta['loreTracking']
+): Promise<NovelMeta['loreTracking']> {
+  const div = document.createElement('div');
+  div.innerHTML = chapterContent;
+  const plainText = div.innerText || div.textContent || '';
+
+  const previousData = previousLoreTracking || { characters: [], locations: [] };
+
+  const existingChars = previousData.characters.map(c =>
+    `- ${c.name} (${c.traits}): ${c.currentStatus}`
+  ).join('\n');
+  const existingLocs = previousData.locations.map(l =>
+    `- ${l.name}: ${l.description}`
+  ).join('\n');
+
+  const systemPrompt = `Anda adalah asisten penulis yang melacak status karakter dan lokasi dalam novel. Berdasarkan teks bab terbaru, UPDATE data lore berikut.
+
+Status sebelumnya:
+${existingChars || 'Belum ada karakter tercatat.'}
+${existingLocs ? `\nLokasi sebelumnya:\n${existingLocs}` : '\nBelum ada lokasi tercatat.'}
+
+ATURAN:
+1. Jika ada karakter yang muncul di bab ini, update currentStatus-nya (posisi, kondisi, hubungan dengan karakter lain).
+2. Jika ada karakter BARU yang diperkenalkan, TAMBAHKAN ke daftar dengan traits dan currentStatus.
+3. Jika ada karakter yang TIDAK muncul sama sekali di bab ini, pertahankan data sebelumnya — jangan hapus.
+4. Untuk setiap lokasi yang muncul di bab ini, update deskripsinya.
+5. Jika ada lokasi baru, tambahkan.
+6. Output HARUS JSON objek dengan format:
+{
+  "characters": [ { "name": "...", "traits": "...", "currentStatus": "..." } ],
+  "locations": [ { "name": "...", "description": "..." } ]
+}`;
+
+  const reply = await generateAIContent(
+    [{ role: 'user', text: `Berdasarkan teks bab berikut, update lore tracking:\n\n${plainText}` }],
+    0.3,
+    systemPrompt,
+    true
+  );
+
+  const cleaned = sanitizeJSONResponse(reply);
+  const parsed = JSON.parse(cleaned);
+
+  return {
+    characters: Array.isArray(parsed.characters) ? parsed.characters : [],
+    locations: Array.isArray(parsed.locations) ? parsed.locations : [],
+  };
 }

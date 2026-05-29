@@ -23,7 +23,8 @@ import CharacterMindMap from './components/CharacterMindMap';
 import APISettings from './components/APISettings';
 import { 
   generateChapterContent, 
-  summarizeChapterContent 
+  summarizeChapterContent,
+  extractLoreTracking,
 } from './utils/novelGenerator';
 import type { NovelMeta, PlotBab } from './utils/novelGenerator';
 
@@ -623,10 +624,14 @@ export default function App() {
       localStorage.setItem('fictify-nodes', JSON.stringify(updatedNodes));
       setActiveChapterId(newId);
 
-      const summary = await summarizeChapterContent(content);
+      const [summary, loreTracking] = await Promise.all([
+        summarizeChapterContent(content),
+        extractLoreTracking(content, novelMeta.loreTracking),
+      ]);
       const updatedMeta: NovelMeta = {
         ...novelMeta,
         generatedBabCount: currentChapterIndex + 1,
+        loreTracking,
         chapterSummaries: {
           ...novelMeta.chapterSummaries,
           [newId]: summary,
