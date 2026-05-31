@@ -22,11 +22,12 @@ import type { UserProfile } from './components/CloudManager';
 import CharacterMindMap from './components/CharacterMindMap';
 import APISettings from './components/APISettings';
 import { 
-  generateChapterContent, 
+  generateChapter, 
   summarizeChapterContent,
-  extractLoreTracking,
+  extractLoreAndUpdateState,
+  emptyLoreState,
 } from './utils/novelGenerator';
-import type { NovelMeta, PlotBab } from './utils/novelGenerator';
+import type { NovelMeta, ChapterMeta } from './utils/novelGenerator';
 
 export interface StoryNode {
   id: string;
@@ -561,12 +562,12 @@ export default function App() {
     }
   };
 
-  const handlePlotGenerated = (premise: string, plotInduk: PlotBab[]) => {
+  const handlePlotGenerated = (premise: string, plotInduk: ChapterMeta[]) => {
     const numberedPlotInduk = plotInduk.map((plot, i) => {
       const alreadyNumbered = /^Bab\s*\d+:/i.test(plot.title);
       return {
+        ...plot,
         title: alreadyNumbered ? plot.title : `Bab ${i + 1}: ${plot.title}`,
-        summary: plot.summary,
       };
     });
 
@@ -577,6 +578,7 @@ export default function App() {
       generatedBabCount: 1,
       chapterSummaries: {},
       isComplete: false,
+      loreState: emptyLoreState(),
     };
     saveNovelMeta(meta);
 
@@ -629,9 +631,13 @@ export default function App() {
     try {
       const freshNodes: StoryNode[] = JSON.parse(localStorage.getItem('fictify-nodes') || '[]');
       const activeChapter = freshNodes.find(n => n.id === activeChapterId && n.type === 'chapter');
-      const content = await generateChapterContent(
-        freshMeta,
-        currentChapterIndex,
+      const currentPlot = freshMeta.plotInduk[currentChapterIndex];
+      if (!currentPlot) {
+        throw new Error(`Plot bab index ${currentChapterIndex} tidak ditemukan.`);
+      }
+      const content = await generateChapter(
+        currentPlot,
+        freshMeta.loreState,
         activeChapter?.content,
       );
 
@@ -648,14 +654,14 @@ export default function App() {
       localStorage.setItem('fictify-nodes', JSON.stringify(updatedNodes));
       setActiveChapterId(newId);
 
-      const [summary, loreTracking] = await Promise.all([
+      const [summary, loreState] = await Promise.all([
         summarizeChapterContent(content),
-        extractLoreTracking(content, freshMeta.loreTracking),
+        extractLoreAndUpdateState(content, freshMeta.loreState),
       ]);
       const updatedMeta: NovelMeta = {
         ...freshMeta,
         generatedBabCount: currentChapterIndex + 1,
-        loreTracking,
+        loreState,
         chapterSummaries: {
           ...freshMeta.chapterSummaries,
           [newId]: summary,

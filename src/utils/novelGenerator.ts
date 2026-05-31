@@ -1,127 +1,113 @@
 import { generateAIContent, sanitizeJSONResponse } from './ai';
 
-export interface PlotBab {
+// ─── Data Structures ─────────────────────────────────────────────────────────
+
+export interface ChapterMeta {
   title: string;
-  summary: string;
+  chapter_type: "Action/Scene" | "Reaction/Sequel";
+  story_beat: string;
+  goal: string;
+  ending: string;
+}
+
+export type PlotBab = ChapterMeta;
+
+export interface CharacterStatus {
+  name: string;
+  health: string;
+  inventory: string[];
+  current_location: string;
+}
+
+export interface NovelLoreState {
+  unresolved_mysteries: string[];
+  character_status: CharacterStatus[];
+  recent_events_summary: string;
 }
 
 export interface NovelMeta {
   premise: string;
   targetBabCount: number;
-  plotInduk: PlotBab[];
+  plotInduk: ChapterMeta[];
   generatedBabCount: number;
   chapterSummaries: Record<string, string>;
   isComplete: boolean;
-  loreTracking?: {
-    characters: {
-      name: string;
-      traits: string;
-      currentStatus: string;
-    }[];
-    locations: {
-      name: string;
-      description: string;
-    }[];
+  loreState: NovelLoreState;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+export function emptyLoreState(): NovelLoreState {
+  return {
+    unresolved_mysteries: [],
+    character_status: [],
+    recent_events_summary: "",
   };
 }
 
 export function buildCharacterContext(): string {
-  const savedChars = localStorage.getItem('fictify-characters');
-  const savedRels = localStorage.getItem('fictify-relationships');
   let result = '';
-
-  if (savedChars) {
-    const chars = JSON.parse(savedChars);
-    result += 'DAFTAR KARAKTER:\n';
-    chars.forEach((char: any) => {
-      result += `- ${char.name} (${char.role || 'Figuran'}): ${char.background || 'Tidak ada deskripsi.'}\n`;
-    });
-
-    if (savedRels) {
-      const rels = JSON.parse(savedRels);
-      const activeRels = rels.filter((r: any) =>
-        chars.some((c: any) => c.id === r.fromId) && chars.some((c: any) => c.id === r.toId)
-      );
-      if (activeRels.length > 0) {
-        result += '\nHUBUNGAN ANTAR KARAKTER:\n';
-        activeRels.forEach((r: any) => {
-          const from = chars.find((c: any) => c.id === r.fromId);
-          const to = chars.find((c: any) => c.id === r.toId);
-          if (from && to) {
-            result += `- ${from.name} ↔ ${to.name}: ${r.type}\n`;
-          }
-        });
+  try {
+    const savedChars = localStorage.getItem('fictify-characters');
+    const savedRels = localStorage.getItem('fictify-relationships');
+    if (savedChars) {
+      const chars = JSON.parse(savedChars);
+      result += 'DAFTAR KARAKTER:\n';
+      chars.forEach((char: any) => {
+        result += `- ${char.name} (${char.role || 'Figuran'}): ${char.background || 'Tidak ada deskripsi.'}\n`;
+      });
+      if (savedRels) {
+        const rels = JSON.parse(savedRels);
+        const activeRels = rels.filter((r: any) =>
+          chars.some((c: any) => c.id === r.fromId) && chars.some((c: any) => c.id === r.toId)
+        );
+        if (activeRels.length > 0) {
+          result += '\nHUBUNGAN ANTAR KARAKTER:\n';
+          activeRels.forEach((r: any) => {
+            const from = chars.find((c: any) => c.id === r.fromId);
+            const to = chars.find((c: any) => c.id === r.toId);
+            if (from && to) result += `- ${from.name} ↔ ${to.name}: ${r.type}\n`;
+          });
+        }
       }
     }
-  }
+  } catch { /* silent */ }
   return result;
 }
 
 export function buildWorldContext(): string {
-  const savedWorld = localStorage.getItem('fictify-worldview');
-  if (!savedWorld) return '';
-  const w = JSON.parse(savedWorld);
-  let result = 'ATURAN DUNIA:\n';
-  if (w.magicSystem) result += `- Sistem Kekuatan/Sihir: ${w.magicSystem}\n`;
-  if (w.geography) result += `- Geografi & Lokasi: ${w.geography}\n`;
-  if (w.history) result += `- Sejarah & Faksi: ${w.history}\n`;
-  return result;
+  try {
+    const savedWorld = localStorage.getItem('fictify-worldview');
+    if (!savedWorld) return '';
+    const w = JSON.parse(savedWorld);
+    let result = 'ATURAN DUNIA:\n';
+    if (w.magicSystem) result += `- Sistem Kekuatan/Sihir: ${w.magicSystem}\n`;
+    if (w.geography) result += `- Geografi & Lokasi: ${w.geography}\n`;
+    if (w.history) result += `- Sejarah & Faksi: ${w.history}\n`;
+    return result;
+  } catch { return ''; }
 }
 
-export async function generatePlotOutline(premise: string, targetBabCount: number): Promise<PlotBab[]> {
+// ─── COMMAND 2: Refactor Outline Generation ─────────────────────────────────
+
+export async function generatePlotOutline(premise: string, targetBabCount: number): Promise<ChapterMeta[]> {
   const characterContext = buildCharacterContext();
   const worldContext = buildWorldContext();
 
-  const systemPrompt = `Anda adalah seorang novelis dan arsitek cerita jenius. Tugas Anda adalah merancang kerangka novel yang kokoh, berdimensi, dan penuh ketegangan dramatik.
+  const systemPrompt = `You are a master narrative designer. Generate a plot outline for a novel. You must output a valid JSON object where each key represents a chapter (e.g., 'chapter_1') and the value matches this exact interface: { title: string, chapter_type: 'Action/Scene' | 'Reaction/Sequel', story_beat: string, goal: string, ending: string }. 
+STRICT RULES:
+1. Map out the story beats logically across the total requested chapters (e.g., Setup, Inciting Incident, Midpoint, Climax, Resolution).
+2. Strictly alternate the 'chapter_type' between 'Action/Scene' (must end in a disaster or complication) and 'Reaction/Sequel' (must end in a new decision or goal).
+3. Generate exactly ${targetBabCount} chapters.`;
 
-[PRINSIP KERANGKA CERITA]
-1. KARAKTER BERCERITA: Jangan buat bab yang hanya deskripsi dunia. Setiap bab harus dimajukan oleh keputusan atau reaksi karakter.
-2. KETEGANGAN BERJENJANG: Konflik tidak harus selesai di satu bab. Biarkan misteri menggantung, tanam pertanyaan yang membuat pembaca ingin lanjut ke bab berikutnya.
-3. VARIASI EMOSI: Campur ketegangan, kehangatan, kesedihan, dan kejutan dalam proporsi yang alami — jangan datar.
-4. KONSISTENSI LORE: Patuhi aturan dunia dan karakter yang sudah ditetapkan.
-
-[ATURAN CHRONOLOGICAL PACING - WAJIB DIPATUHI]
-Total bab yang harus dibuat: ${targetBabCount}. Anda WAJIB membagi perkembangan cerita secara proporsional sesuai rumus berikut:
-
-- AWAL (Bab 1 sampai sekitar Bab ${Math.ceil(targetBabCount / 3)}):
-  Fokus pada awal mula, pengenalan dunia dan karakter secara mendalam, proses perjuangan awal, serta kegagalan atau hambatan pertama. DILARANG memberikan kesuksesan instan atau lompatan waktu (time-skip) yang ekstrem di fase ini.
-
-- TENGAH (Bab ${Math.ceil(targetBabCount / 3) + 1} sampai sekitar Bab ${targetBabCount - 3}):
-  Fokus pada peningkatan konflik, pengenalan rival/antagonis, rintangan yang semakin berat, dan perkembangan karakter yang gradual. Setiap bab harus terasa sebagai batu loncatan alami menuju klimaks.
-
-- AKHIR (3 bab terakhir: Bab ${targetBabCount - 2} sampai Bab ${targetBabCount}):
-  Baru pada fase ini perbolehkan terjadinya klimaks, pencapaian puncak/kesuksesan, dan resolusi cerita. Bab terakhir harus memberikan kepuasan emosional tanpa terasa terburu-buru.
-
-LARANGAN KERAS:
-- DILARANG membuat lompatan waktu (time-skip) yang terlalu ekstrem di antara bab yang berurutan.
-- DILARANG memberikan resolusi atau kesuksesan instan kepada karakter utama di bab-bab awal.
-- DILARANG menulis summary yang terlalu pendek atau tidak informatif — setiap summary harus 2-3 kalimat yang jelas.
-
-${worldContext ? `${worldContext}\n` : ''}${characterContext ? `${characterContext}\n` : ''}
-
-[FORMAT OUTPUT - PERINGATAN KERAS]
-Anda WAJIB mengikuti aturan berikut dengan TEPAT:
-1. RESPON ANDA HANYA BOLEH BERUPA JSON ARRAY. TIDAK BOLEH ADA teks pembuka seperti "Berikut adalah...", "Tentu...", "Baik...", "Ini plotnya..." atau apapun.
-2. JANGAN GUNAKAN markdown backticks (\`\`\`json atau \`\`\`).
-3. Output Anda harus DIMULAI LANGSUNG dengan tanda kurung siku "[" dan DIAKHIRI dengan tanda kurung siku tutup "]".
-4. SETIAP objek dalam array HARUS memiliki key "title" (string) dan "summary" (string).
-5. Untuk properti "title", WAJIB menyertakan nomor bab di depannya dengan format "Bab X: [Judul]". Contoh: "Bab 1: Permulaan yang Baru", "Bab 2: Rahasia Terungkap".
-6. Buatkan TEPAT ${targetBabCount} objek dalam array — tidak kurang, tidak lebih.
-
-Contoh output yang BENAR:
-[
-  {
-    "title": "Bab 1: Permulaan yang Baru",
-    "summary": "Ringkasan naratif 2-3 kalimat tentang apa yang terjadi di bab ini, konflik apa yang muncul, dan bagaimana perasaan/perubahan karakter."
-  },
-  {
-    "title": "Bab 2: Rahasia Terungkap",
-    "summary": "Ringkasan naratif 2-3 kalimat tentang apa yang terjadi di bab ini..."
-  }
-]`;
+  const contextBlock = [
+    characterContext ? `CHARACTERS:\n${characterContext}` : '',
+    worldContext ? `WORLD:\n${worldContext}` : '',
+    `PREMISE:\n${premise}`,
+  ].filter(Boolean).join('\n');
 
   const reply = await generateAIContent(
-    [{ role: 'user', text: `Buatkan kerangka cerita ${targetBabCount} bab berdasarkan premis berikut:\n\nPremis: "${premise}"` }],
+    [{ role: 'user', text: contextBlock }],
     0.3,
     systemPrompt,
     true
@@ -130,119 +116,112 @@ Contoh output yang BENAR:
   const cleanedReply = sanitizeJSONResponse(reply);
   const parsed = JSON.parse(cleanedReply);
 
-  if (!Array.isArray(parsed)) {
-    throw new Error("Format balasan AI tidak sesuai.");
-  }
+  // Handle both object { chapter_1: {...} } and array formats
+  const entries: ChapterMeta[] = [];
 
-  return parsed.map((ch: any) => ({
-    title: ch.title,
-    summary: ch.summary
-  }));
-}
-
-export async function generateChapterContent(
-  novelMeta: NovelMeta,
-  chapterIndex: number,
-  lastChapterContent?: string,
-): Promise<string> {
-  const characterContext = buildCharacterContext();
-  const worldContext = buildWorldContext();
-  const currentPlot = novelMeta.plotInduk[chapterIndex];
-  if (!currentPlot) {
-    throw new Error(`Plot bab index ${chapterIndex} tidak ditemukan. Total plot: ${novelMeta.plotInduk.length}`);
-  }
-
-  let previousChaptersSummary = '';
-  const summaryEntries = Object.entries(novelMeta.chapterSummaries);
-  if (summaryEntries.length > 0) {
-    previousChaptersSummary = 'RINGKASAN BAB SEBELUMNYA:\n';
-    summaryEntries.forEach(([, summary]) => {
-      previousChaptersSummary += `- ${summary}\n`;
+  if (Array.isArray(parsed)) {
+    parsed.forEach((ch: any, i: number) => {
+      entries.push({
+        title: ch.title || `Bab ${i + 1}`,
+        chapter_type: ch.chapter_type === "Reaction/Sequel" ? "Reaction/Sequel" : "Action/Scene",
+        story_beat: ch.story_beat || "Rising Action",
+        goal: ch.goal || "",
+        ending: ch.ending || (i % 2 === 0 ? "Disaster — komplikasi tak terduga menggagalkan rencana." : "Decision — karakter mengambil keputusan baru."),
+      });
     });
+  } else if (typeof parsed === 'object' && parsed !== null) {
+    const sortedKeys = Object.keys(parsed).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, ''), 10);
+      const numB = parseInt(b.replace(/\D/g, ''), 10);
+      return (isNaN(numA) ? 0 : numA) - (isNaN(numB) ? 0 : numB);
+    });
+    sortedKeys.forEach((key, i) => {
+      const ch = parsed[key];
+      entries.push({
+        title: ch.title || `Bab ${i + 1}`,
+        chapter_type: ch.chapter_type === "Reaction/Sequel" ? "Reaction/Sequel" : "Action/Scene",
+        story_beat: ch.story_beat || "Rising Action",
+        goal: ch.goal || "",
+        ending: ch.ending || (i % 2 === 0 ? "Disaster — komplikasi tak terduga menggagalkan rencana." : "Decision — karakter mengambil keputusan baru."),
+      });
+    });
+  } else {
+    throw new Error("Format balasan AI tidak sesuai: bukan array atau object.");
   }
 
-  let lastChapterFullText = '';
-  if (lastChapterContent) {
-    const div = document.createElement('div');
-    div.innerHTML = lastChapterContent;
-    const plainText = div.innerText || div.textContent || '';
-    const cleanText = plainText
-      .replace(/Mulai ceritamu di sini\.\.\./g, '')
-      .trim();
-    if (cleanText.length > 10) {
-      if (cleanText.length > 8000) {
-        // Potong aman di batas paragraf (newline) — bukan di tengah kata
-        const truncLen = 8000;
-        const before = cleanText.substring(0, truncLen);
-        const breakPoint = before.lastIndexOf('\n');
-        if (breakPoint > 100) {
-          lastChapterFullText = before.substring(0, breakPoint) +
-            `\n\n[...${cleanText.length - truncLen} karakter...]\n\n`;
-        } else {
-          lastChapterFullText = before +
-            `\n\n[...${cleanText.length - truncLen} karakter...]\n\n`;
-        }
-      } else {
-        lastChapterFullText = cleanText;
-      }
+  if (entries.length !== targetBabCount) {
+    // Pad or trim to match target
+    while (entries.length < targetBabCount) {
+      const i = entries.length;
+      entries.push({
+        title: `Bab ${i + 1}: [Lanjutan]`,
+        chapter_type: i % 2 === 0 ? "Action/Scene" : "Reaction/Sequel",
+        story_beat: "Rising Action",
+        goal: "Melanjutkan perjuangan karakter.",
+        ending: i % 2 === 0 ? "Disaster — komplikasi tak terduga menggagalkan rencana." : "Decision — karakter mengambil keputusan baru.",
+      });
     }
   }
 
-  // State Transition: bersihkan konteks berdasarkan plot bab selanjutnya
-  let stateTransitionNote = '';
-  const nextPlotSummary = currentPlot.summary.toLowerCase();
-  const locationWords = ['warung', 'kamar', 'rumah', 'kantor', 'sekolah', 'kafe', 'restoran', 'taman', 'jalan', 'pasar', 'kota', 'desa', 'pantai', 'gunung', 'kendaraan', 'mobil', 'motor', 'bis', 'kereta'];
-  const foundLocations = locationWords.filter(w => nextPlotSummary.includes(w));
-  if (foundLocations.length > 0) {
-    stateTransitionNote = `\n[CATATAN TRANSISI: Bab selanjutnya berlatar di tempat yang mengandung kata "${foundLocations[0]}". Pastikan adegan terakhir di bab sebelumnya ditutup secara alami sebelum pindah ke latar baru. Jangan bawa properti atau suasana dari tempat lama ke tempat baru tanpa transisi yang wajar.]`;
+  return entries;
+}
+
+// ─── COMMAND 3: Refactor Chapter Generation ─────────────────────────────────
+
+export async function generateChapter(
+  chapterMeta: ChapterMeta,
+  novelLoreState: NovelLoreState,
+  previousChapterContent?: string,
+): Promise<string> {
+  let previousChapterText = '';
+  if (previousChapterContent) {
+    try {
+      const div = document.createElement('div');
+      div.innerHTML = previousChapterContent;
+      const plainText = div.innerText || div.textContent || '';
+      const cleanText = plainText.replace(/Mulai ceritamu di sini\.\.\./g, '').trim();
+      if (cleanText.length > 10) {
+        previousChapterText = cleanText.length > 4000
+          ? cleanText.slice(0, cleanText.lastIndexOf('\n', 4000)) + `\n[... ${cleanText.length - 4000} karakter terpotong ...]`
+          : cleanText;
+      }
+    } catch { /* silent */ }
   }
 
-  const loreTrackingSection = novelMeta.loreTracking && (novelMeta.loreTracking.characters.length > 0 || novelMeta.loreTracking.locations.length > 0)
-    ? `[STATUS KARAKTER & LOKASI PALING AKHIR (WAJIB DIPATUHI)]
-${novelMeta.loreTracking.characters.length > 0 ? `Status karakter saat ini:\n${novelMeta.loreTracking.characters.map(c => `- ${c.name}: ${c.currentStatus}`).join('\n')}\n` : ''}
-${novelMeta.loreTracking.locations.length > 0 ? `Deskripsi lokasi:\n${novelMeta.loreTracking.locations.map(l => `- ${l.name}: ${l.description}`).join('\n')}\n` : ''}
-PERINGATAN: Status di atas adalah kondisi PALING AKHIR yang diketahui. JANGAN mengubah status (pekerjaan, lokasi, kondisi) karakter tanpa alasan logis yang dijelaskan di dalam bab ini. Jika tidak ada perubahan, pertahankan status yang tercatat.
-`
-    : '';
+  const systemPrompt = `You are an expert novelist. Write the next chapter of the story.
+[CHAPTER METADATA]:
+- Title: ${chapterMeta.title}
+- Type: ${chapterMeta.chapter_type}
+- Beat: ${chapterMeta.story_beat}
+- Goal: ${chapterMeta.goal}
+- Ending: ${chapterMeta.ending}
 
-  const systemPrompt = `Anda adalah seorang novelis profesional. Tugas Anda adalah menulis isi novel bab demi bab berdasarkan plot outline yang sudah ditentukan.
+[CURRENT WORLD LORE]:
+- Recent Events: ${novelLoreState.recent_events_summary}
+- Character Status: ${JSON.stringify(novelLoreState.character_status)}
+- Unresolved Mysteries: ${JSON.stringify(novelLoreState.unresolved_mysteries)}
 
-[PRINSIP PENULISAN]
-1. GAYA "SHOW, DON'T TELL": Tunjukkan emosi melalui bahasa tubuh, ekspresi, tindakan, bukan dengan menyebutkan emosi secara literal.
-2. DIALOG ORGANIK: Tulis dialog yang natural, tidak kaku, seperti percakapan sehari-hari dalam bahasa Indonesia.
-3. BEBAS KLISE: Hindari frasa transisi klise. Gunakan deskripsi yang unik dan segar.
-4. PROGRESI PROSA: Alur mengalir lancar, jangan terburu-buru menyelesaikan adegan.
-5. TANPA RINGKASAN: Jangan beri kesimpulan atau moral di akhir. Berhenti natural.
+STRICT RULES:
+1. Pacing: If Type is 'Reaction/Sequel', prioritize internal monologue, worldbuilding, and planning. If 'Action/Scene', prioritize physical conflict and stakes.
+2. Causality: Events MUST follow a 'Therefore' or 'But' logic derived directly from the 'Recent Events'. NEVER use episodic 'And then' transitions.
+3. Show, Don't Tell: Prohibit emotional labels (e.g., angry, sad). Dramatize through physical reactions and micro-expressions. Include at least three sensory details (sight, sound, smell/touch) per scene.
+4. Continuity (Chekhov's Gun): Strictly adhere to the 'Character Status'. Do not invent new inventory items, change locations randomly, or heal injuries unless explicitly written in the scene.
+Write ONLY the story content.`;
 
-[ATURAN KETAT KELANCARAN PLOT]
-1. SPASIAL: Jika latar tempat berubah (misal: dari Kamar ke Warung), karakter tidak boleh berinteraksi dengan properti tempat sebelumnya (jangan sebut kusen pintu kamar jika sedang di warung sayur).
-2. BENDA: Lacak benda yang dipegang karakter. Jika di awal adegan karakter membuka laptop, jangan tiba-tiba ganti menjadi HP tanpa ada kalimat transisi (misal: "Early mengunci laptopnya dan mengantongi ponselnya").
-3. AKURASI BUDAYA: Pastikan makanan tradisional digambarkan akurat (Sate lilit menggunakan bumbu dasar rempah/serai, BUKAN bumbu kacang).
-4. TOKOH: Jangan memunculkan tokoh baru secara mendadak (seperti Ibu) tanpa ada perkenalan atau alasan logis di dalam narasi.
-
-[KONTEKS KARAKTER & DUNIA]
-${characterContext}
-${worldContext}
-
-${loreTrackingSection}
-[PLOT BAB SAAT INI - Bab ${chapterIndex + 1}]
-Judul: ${currentPlot.title}
-Sinopsis: ${currentPlot.summary}
-
-${previousChaptersSummary ? `${previousChaptersSummary}\n` : ''}
-${lastChapterFullText ? `[TEKS PENUH BAB SEBELUMNYA - untuk menyambung gaya bahasa]:\n${lastChapterFullText}${stateTransitionNote}` : ''}
-
-[TUGAS ANDA]
-Tulis isi penuh untuk Bab ${chapterIndex + 1} dengan judul "${currentPlot.title}" berdasarkan sinopsis di atas. Tulis dalam format HTML dengan tag <p> untuk setiap paragraf. Mulai langsung dengan konten cerita, tanpa kata pengantar.`;
+  const userMsg = previousChapterText
+    ? `Teks bab sebelumnya (untuk kontinuitas gaya dan alur):\n${previousChapterText}\n\nTulis bab selanjutnya berdasarkan metadata dan lore di atas.`
+    : `Tulis bab baru berdasarkan metadata dan lore di atas.`;
 
   const reply = await generateAIContent(
-    [{ role: 'user', text: `Tulis Bab ${chapterIndex + 1}: ${currentPlot.title}` }],
+    [{ role: 'user', text: userMsg }],
     0.7,
     systemPrompt
   );
 
   return reply;
 }
+
+// ─── Chapter summarization ──────────────────────────────────────────────────
 
 export async function summarizeChapterContent(chapterContent: string): Promise<string> {
   const systemPrompt = `Buatlah ringkasan 1 paragraf (2-3 kalimat) dari bab novel berikut. Ringkasan harus mencakup kejadian penting, konflik, dan perkembangan karakter. Gunakan bahasa Indonesia yang padat dan informatif.`;
@@ -256,53 +235,48 @@ export async function summarizeChapterContent(chapterContent: string): Promise<s
   return reply.trim();
 }
 
-export async function extractLoreTracking(
+// ─── COMMAND 4: Implement Lore Extraction ────────────────────────────────────
+
+export async function extractLoreAndUpdateState(
   chapterContent: string,
-  previousLoreTracking?: NovelMeta['loreTracking']
-): Promise<NovelMeta['loreTracking']> {
-  const div = document.createElement('div');
-  div.innerHTML = chapterContent;
-  const plainText = div.innerText || div.textContent || '';
+  previousLoreState?: NovelLoreState,
+): Promise<NovelLoreState> {
+  let plainText = '';
+  try {
+    const div = document.createElement('div');
+    div.innerHTML = chapterContent;
+    plainText = div.innerText || div.textContent || '';
+  } catch {
+    plainText = chapterContent;
+  }
 
-  const previousData = previousLoreTracking || { characters: [], locations: [] };
+  const prev = previousLoreState || emptyLoreState();
+  const prevStateJson = JSON.stringify(prev);
 
-  const existingChars = previousData.characters.map(c =>
-    `- ${c.name} (${c.traits}): ${c.currentStatus}`
-  ).join('\n');
-  const existingLocs = previousData.locations.map(l =>
-    `- ${l.name}: ${l.description}`
-  ).join('\n');
-
-  const systemPrompt = `Anda adalah asisten penulis yang melacak status karakter dan lokasi dalam novel. Berdasarkan teks bab terbaru, UPDATE data lore berikut.
-
-Status sebelumnya:
-${existingChars || 'Belum ada karakter tercatat.'}
-${existingLocs ? `\nLokasi sebelumnya:\n${existingLocs}` : '\nBelum ada lokasi tercatat.'}
-
-ATURAN:
-1. Jika ada karakter yang muncul di bab ini, update currentStatus-nya (posisi, kondisi, hubungan dengan karakter lain).
-2. Jika ada karakter BARU yang diperkenalkan, TAMBAHKAN ke daftar dengan traits dan currentStatus.
-3. Jika ada karakter yang TIDAK muncul sama sekali di bab ini, pertahankan data sebelumnya — jangan hapus.
-4. Untuk setiap lokasi yang muncul di bab ini, update deskripsinya.
-5. Jika ada lokasi baru, tambahkan.
-6. Output HARUS JSON objek dengan format:
-{
-  "characters": [ { "name": "...", "traits": "...", "currentStatus": "..." } ],
-  "locations": [ { "name": "...", "description": "..." } ]
-}`;
+  const systemPrompt = `You are a precise narrative state tracker. Read the newly generated chapter and the previous NovelLoreState, then output an updated JSON matching the NovelLoreState interface exactly: { unresolved_mysteries: string[], character_status: array, recent_events_summary: string }.
+STRICT RULES:
+1. recent_events_summary: Summarize the new chapter in under 300 words.
+2. character_status: Update locations, add new injuries, and add/remove inventory items based ONLY on what happened in the chapter.
+3. unresolved_mysteries: Append new mysteries or remove resolved ones.`;
 
   const reply = await generateAIContent(
-    [{ role: 'user', text: `Berdasarkan teks bab berikut, update lore tracking:\n\n${plainText}` }],
+    [{ role: 'user', text: `Previous NovelLoreState:\n${prevStateJson}\n\nNew chapter text:\n${plainText}` }],
     0.3,
     systemPrompt,
     true
   );
 
   const cleaned = sanitizeJSONResponse(reply);
-  const parsed = JSON.parse(cleaned);
 
-  return {
-    characters: Array.isArray(parsed.characters) ? parsed.characters : [],
-    locations: Array.isArray(parsed.locations) ? parsed.locations : [],
-  };
+  try {
+    const parsed = JSON.parse(cleaned);
+    return {
+      unresolved_mysteries: Array.isArray(parsed.unresolved_mysteries) ? parsed.unresolved_mysteries : prev.unresolved_mysteries,
+      character_status: Array.isArray(parsed.character_status) ? parsed.character_status : prev.character_status,
+      recent_events_summary: typeof parsed.recent_events_summary === 'string' ? parsed.recent_events_summary : prev.recent_events_summary,
+    };
+  } catch {
+    // Fallback: return previous state unchanged
+    return prev;
+  }
 }
