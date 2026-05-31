@@ -589,7 +589,7 @@ export default function App() {
       title: firstPlot.title,
       type: 'chapter',
       parentId: null,
-      content: `<h2>${firstPlot.title}</h2><p><i>${firstPlot.summary}</i></p><p><br></p><p>Bab 1 dari ${numberedPlotInduk.length} — Selamat menulis!</p>`
+      content: `<h2>${firstPlot.title}</h2><p><i>Goal: ${firstPlot.goal || 'Mulai perjalanan.'} — Ending: ${firstPlot.ending || 'Bersambung.'}</i></p><p><br></p><p>Bab 1 dari ${numberedPlotInduk.length} — Selamat menulis!</p>`
     };
 
     if (editor) {
